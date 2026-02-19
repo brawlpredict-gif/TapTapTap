@@ -103,7 +103,7 @@ function update(){
     scoreText.innerText="Очки: "+score;
     doubleBtn.disabled=bought2 || score<100;
     tripleBtn.disabled=bought3 || score<300;
-    specialBtn.disabled=boughtSpecial || score<500;
+    specialBtn.disabled=boughtSpecial || score<10;
 }
 
 // функция для создания кота-снега
@@ -181,4 +181,5 @@ update();
 
 </body>
 </html>
+
 
