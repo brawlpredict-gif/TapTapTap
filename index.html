@@ -160,8 +160,8 @@ tripleBtn.onclick=function(){
 }
 // спец апгрейд кот-снег
 specialBtn.onclick=function(){
-    if(score>=500 && !boughtSpecial){
-        score-=500; boughtSpecial=true; clickValue*=2; // можно увеличить клик
+    if(score>=10 && !boughtSpecial){
+        score-=10; boughtSpecial=true; clickValue*=2; // можно увеличить клик
         specialBtn.innerText="Куплено";
         update();
 
@@ -181,3 +181,4 @@ update();
 
 </body>
 </html>
+
