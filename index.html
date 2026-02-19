@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>BriAU Clicker с новым апгрейдом</title>
+<title>IljaClicker</title>
 <style>
 html, body{
     margin:0; padding:0;
@@ -14,7 +14,6 @@ html, body{
 .container{
     display:flex; height:100vh; width:100vw;
 }
-/* Левая часть — игра */
 .left{
     flex:1;
     display:flex; flex-direction:column;
@@ -30,27 +29,22 @@ html, body{
     transition: transform 0.1s;
 }
 #image:active{ transform: scale(1.08); }
-/* ripple */
 .ripple{
     position:absolute; border-radius:50%; border:3px solid white;
     width:20px; height:20px; animation:rippleAnim 0.5s linear;
 }
 @keyframes rippleAnim{ from{transform:scale(1);opacity:1;} to{transform:scale(6);opacity:0;} }
-/* +очки */
 .plus{ position:absolute; color:#00ff99; font-weight:bold; animation:plusAnim 0.6s linear; }
 @keyframes plusAnim{ from{transform:translateY(0);opacity:1;} to{transform:translateY(-40px);opacity:0;} }
-/* линза */
 .lens{ position:absolute; width:180px; height:180px; border-radius:50%; overflow:hidden; animation:lensAnim 0.3s forwards;}
 .lens img{ position:absolute; width:600px; transform:scale(1.4);}
 @keyframes lensAnim{ to{ transform:scale(1.2); opacity:0; } }
-/* магазин */
 .shop{
     width:40vw; max-width:200px;
     background:#222; padding:10px; display:flex; flex-direction:column;
 }
 button{ margin:5px 0; padding:10px; font-size:16px; border:none; border-radius:10px; background:#444; color:white;}
 button:disabled{ background:#222; color:#777;}
-/* коты-снег */
 .snowCat{
     position:absolute; width:40px; height:40px;
     pointer-events:none; z-index:999;
@@ -75,11 +69,10 @@ button:disabled{ background:#222; color:#777;}
 <div>Апгрейды</div>
 <button id="double">Двойной клик (100)</button>
 <button id="triple">Тройной клик (300)</button>
-<button id="special">CAT EVENT(500)</button>
+<button id="special">Cat Event (500)</button>
 </div>
 </div>
 
-<!-- звуки -->
 <audio id="clickSound" src="click.mp3"></audio>
 <audio id="specialSound" src="special.mp3"></audio>
 
@@ -99,6 +92,8 @@ let doubleBtn=document.getElementById("double");
 let tripleBtn=document.getElementById("triple");
 let specialBtn=document.getElementById("special");
 
+let catInterval=null;
+
 function update(){
     scoreText.innerText="Очки: "+score;
     doubleBtn.disabled=bought2 || score<100;
@@ -106,73 +101,70 @@ function update(){
     specialBtn.disabled=boughtSpecial || score<10;
 }
 
-// функция для создания кота-снега
+// создаём одного котика
 function createSnowCat(){
-    let cat = document.createElement("img");
-    cat.src = "cat.png"; // картинка кота
-    cat.className = "snowCat";
-    cat.style.left = Math.random()*window.innerWidth + "px";
-    cat.style.top = "-50px";
-    cat.style.animationDuration = (3 + Math.random()*2) + "s";
+    let cat=document.createElement("img");
+    cat.src="cat.png";
+    cat.className="snowCat";
+    cat.style.left=Math.random()*window.innerWidth+"px";
+    cat.style.top="-50px";
+    cat.style.animationDuration=(3+Math.random()*2)+"s";
     document.body.appendChild(cat);
-    setTimeout(()=>cat.remove(), 5000);
+    setTimeout(()=>cat.remove(),5000);
 }
 
 // клик по картинке
 image.addEventListener("click", function(e){
-    score += clickValue;
-    scoreText.innerText = "Очки: "+score;
-
-    clickSound.currentTime=0;
-    clickSound.play();
+    score+=clickValue;
+    scoreText.innerText="Очки: "+score;
+    clickSound.currentTime=0; clickSound.play();
 
     let rect=image.getBoundingClientRect();
     let x=e.clientX-rect.left;
     let y=e.clientY-rect.top;
 
-    // ripple
     let r=document.createElement("div");
     r.className="ripple"; r.style.left=x+"px"; r.style.top=y+"px";
     image.parentElement.appendChild(r); setTimeout(()=>r.remove(),500);
 
-    // +очки
     let p=document.createElement("div"); p.className="plus"; p.innerText="+"+clickValue;
     p.style.left=x+"px"; p.style.top=y+"px"; image.parentElement.appendChild(p); setTimeout(()=>p.remove(),600);
 
-    // линза рыбьего глаза
     let lens=document.createElement("div"); lens.className="lens";
     lens.style.left=(x-90)+"px"; lens.style.top=(y-90)+"px";
     let img=document.createElement("img"); img.src=image.src;
     img.style.left=-(x-90)*1.4+"px"; img.style.top=-(y-90)*1.4+"px";
-    lens.appendChild(img); image.parentElement.appendChild(lens);
-    setTimeout(()=>lens.remove(),300);
+    lens.appendChild(img); image.parentElement.appendChild(lens); setTimeout(()=>lens.remove(),300);
 
     update();
 });
 
-// двойной клик
+// двойной
 doubleBtn.onclick=function(){
     if(score>=100 && !bought2){ score-=100; clickValue=2; bought2=true; doubleBtn.innerText="Куплено"; update(); }
 }
-// тройной клик
+// тройной
 tripleBtn.onclick=function(){
     if(score>=300 && !bought3){ score-=300; clickValue=3; bought3=true; tripleBtn.innerText="Куплено"; update(); }
 }
-// спец апгрейд кот-снег
+
+// Cat Event
 specialBtn.onclick=function(){
     if(score>=10 && !boughtSpecial){
-        score-=10; boughtSpecial=true; clickValue*=2; // можно увеличить клик
-        specialBtn.innerText="Куплено";
-        update();
+        score-=10; boughtSpecial=true; specialBtn.innerText="Куплено"; clickValue*=2; update();
 
-        // музыка
-        specialSound.currentTime=0;
-        specialSound.play();
+        specialSound.currentTime=0; specialSound.play();
 
-        // снежные котики
-        for(let i=0;i<15;i++){
-            setTimeout(createSnowCat,i*200);
-        }
+        // запускаем Cat Event на 218 секунд (3:38)
+        let duration = 218000; // миллисекунды
+
+        // каждые 250ms падает кот
+        catInterval=setInterval(createSnowCat,250);
+
+        setTimeout(()=>{
+            clearInterval(catInterval);
+            catInterval=null;
+        }, duration);
     }
 }
 
@@ -181,5 +173,3 @@ update();
 
 </body>
 </html>
-
-
