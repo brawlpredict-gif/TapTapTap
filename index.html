@@ -2,9 +2,15 @@
 <html>
 <head>
 <meta charset="UTF-8">
+
+<!-- отключает zoom на телефоне -->
+<meta name="viewport"
+content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
 <title>IljaClicker</title>
 
 <style>
+
 body {
     margin: 0;
     font-family: Arial, sans-serif;
@@ -13,19 +19,19 @@ body {
     display: flex;
     height: 100vh;
     overflow: hidden;
+    touch-action: manipulation;
 }
 
-/* левая зона — игра */
+/* игровая зона */
 #gameArea {
     flex: 3;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    position: relative;
 }
 
-/* правая зона — апгрейды */
+/* магазин */
 #shop {
     flex: 1;
     background-color: #222;
@@ -38,6 +44,7 @@ body {
     margin-bottom: 20px;
 }
 
+/* контейнер фото */
 #imageContainer {
     position: relative;
     display: inline-block;
@@ -47,9 +54,13 @@ body {
 /* фото */
 #image {
     width: 600px;
-    cursor: pointer;
     user-select: none;
     display: block;
+    cursor: pointer;
+
+    touch-action: manipulation;
+    -webkit-user-drag: none;
+    -webkit-tap-highlight-color: transparent;
 }
 
 /* ripple */
@@ -70,7 +81,7 @@ body {
     }
 }
 
-/* +1 */
+/* +очки */
 .plusOne {
     position: absolute;
     color: #00ff88;
@@ -81,11 +92,17 @@ body {
 }
 
 @keyframes floatUp {
-    from { opacity: 1; transform: translateY(0); }
-    to { opacity: 0; transform: translateY(-80px); }
+    from {
+        opacity: 1;
+        transform: translateY(0);
+    }
+    to {
+        opacity: 0;
+        transform: translateY(-80px);
+    }
 }
 
-/* линза рыбьего глаза */
+/* рыбий глаз */
 .lens {
     position: absolute;
     width: 180px;
@@ -99,36 +116,34 @@ body {
 .lens img {
     position: absolute;
     width: 600px;
-    height: auto;
     transform: scale(1.4);
 }
 
 @keyframes lensAnim {
-    0% { transform: scale(0.5); opacity: 0.9; }
-    100% { transform: scale(1.2); opacity: 0; }
+    0% {
+        transform: scale(0.5);
+        opacity: 0.9;
+    }
+    100% {
+        transform: scale(1.2);
+        opacity: 0;
+    }
 }
 
-/* кнопка апгрейда */
+/* кнопки */
 .upgradeButton {
-    display: block;
     width: 100%;
     padding: 15px;
     margin-bottom: 15px;
     font-size: 22px;
     background-color: #00ff88;
-    color: #111;
+    color: black;
     border: none;
     border-radius: 10px;
-    cursor: pointer;
 }
 
 .upgradeButton:disabled {
     opacity: 0.5;
-    cursor: not-allowed;
-}
-
-#shop h2 {
-    margin-top: 0;
 }
 
 </style>
@@ -137,117 +152,148 @@ body {
 <body>
 
 <div id="gameArea">
-    <div id="score">0</div>
-    <div id="imageContainer">
-        <img src="brother.png" id="image">
-    </div>
+
+<div id="score">0</div>
+
+<div id="imageContainer">
+<img src="brother.png" id="image">
+</div>
+
 </div>
 
 <div id="shop">
-    <h2>Магазин апгрейдов</h2>
-    <button class="upgradeButton" id="doubleClickBtn">Двойной клик (100 очков)</button>
-    <button class="upgradeButton" id="tripleClickBtn">Тройной клик (500 очков)</button>
+
+<h2>Магазин</h2>
+
+<button class="upgradeButton" id="doubleBtn">
+Двойной клик (100)
+</button>
+
+<button class="upgradeButton" id="tripleBtn">
+Тройной клик (300)
+</button>
+
 </div>
 
 <script>
+
 let score = 0;
-let clickValue = 1; // сколько очков за клик
-let container = document.getElementById("imageContainer");
+let clickValue = 1;
+
 let image = document.getElementById("image");
+let container = document.getElementById("imageContainer");
+
 let scoreDiv = document.getElementById("score");
 
-let doubleBtn = document.getElementById("doubleClickBtn");
-let tripleBtn = document.getElementById("tripleClickBtn");
+let doubleBtn = document.getElementById("doubleBtn");
+let tripleBtn = document.getElementById("tripleBtn");
 
-// быстрый звук
-function playClickSound() {
+/* звук */
+function playSound()
+{
     let audio = new Audio("click.mp3");
     audio.volume = 0.3;
     audio.play();
 }
 
-// обновление состояния кнопок
-function updateButtons() {
+/* обновление кнопок */
+function updateButtons()
+{
     doubleBtn.disabled = score < 100;
-    tripleBtn.disabled = score < 500;
+    tripleBtn.disabled = score < 300;
 }
 
-// обработка клика по картинке
-image.addEventListener("pointerdown", function(event) {
+/* тап */
+image.addEventListener("pointerdown", function(e)
+{
+    e.preventDefault();
+
     score += clickValue;
     scoreDiv.innerText = score;
 
-    playClickSound();
+    playSound();
 
     let rect = container.getBoundingClientRect();
-    let x = event.clientX - rect.left;
-    let y = event.clientY - rect.top;
 
-    // ripple
+    let x = e.clientX - rect.left;
+    let y = e.clientY - rect.top;
+
+    /* ripple */
     let ripple = document.createElement("div");
+
     ripple.className = "ripple";
     ripple.style.left = (x - 50) + "px";
     ripple.style.top = (y - 50) + "px";
-    container.appendChild(ripple);
-    setTimeout(() => ripple.remove(), 500);
 
-    // +1
+    container.appendChild(ripple);
+
+    setTimeout(()=>ripple.remove(),500);
+
+    /* +очки */
     let plus = document.createElement("div");
+
     plus.className = "plusOne";
     plus.innerText = "+" + clickValue;
+
     plus.style.left = x + "px";
     plus.style.top = y + "px";
-    container.appendChild(plus);
-    setTimeout(() => plus.remove(), 800);
 
-    // линза рыбьего глаза
+    container.appendChild(plus);
+
+    setTimeout(()=>plus.remove(),800);
+
+    /* рыбий глаз */
     let lens = document.createElement("div");
+
     lens.className = "lens";
     lens.style.left = (x - 90) + "px";
     lens.style.top = (y - 90) + "px";
 
-    let zoomed = document.createElement("img");
-    zoomed.src = image.src;
-    zoomed.style.left = -(x - 90) * 1.4 + "px";
-    zoomed.style.top = -(y - 90) * 1.4 + "px";
+    let zoom = document.createElement("img");
 
-    lens.appendChild(zoomed);
+    zoom.src = image.src;
+
+    zoom.style.left = -(x - 90) * 1.4 + "px";
+    zoom.style.top = -(y - 90) * 1.4 + "px";
+
+    lens.appendChild(zoom);
+
     container.appendChild(lens);
-    setTimeout(() => lens.remove(), 350);
+
+    setTimeout(()=>lens.remove(),350);
 
     updateButtons();
 });
 
-// покупка апгрейда: двойной клик
-doubleBtn.addEventListener("click", function() {
-    if(score >= 100){
+/* двойной */
+doubleBtn.onclick = function()
+{
+    if(score >= 100)
+    {
         score -= 100;
         clickValue = 2;
         scoreDiv.innerText = score;
-        updateButtons();
         doubleBtn.disabled = true;
-        doubleBtn.innerText = "Двойной клик куплен!";
+        updateButtons();
     }
-});
+}
 
-// покупка апгрейда: тройной клик
-tripleBtn.addEventListener("click", function() {
-    if(score >= 500){
-        score -= 500;
+/* тройной */
+tripleBtn.onclick = function()
+{
+    if(score >= 300)
+    {
+        score -= 300;
         clickValue = 3;
         scoreDiv.innerText = score;
-        updateButtons();
         tripleBtn.disabled = true;
-        tripleBtn.innerText = "Тройной клик куплен!";
+        updateButtons();
     }
-});
+}
 
-// начальное обновление кнопок
 updateButtons();
 
 </script>
 
 </body>
 </html>
-
-
