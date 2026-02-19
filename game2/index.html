@@ -16,7 +16,6 @@ user-select:none !important;
 }
 html,body{
 overflow:hidden;
-background:#87CEEB;
 touch-action:none;
 font-family:Arial;
 }
@@ -86,12 +85,16 @@ const imgJump = new Image();
 imgJump.src="player_jump.png";
 let currentImg = imgFall;
 
+// фон
+const background = new Image();
+background.src="background.png"; // заменяешь на свой фон
+
 // ФИЗИКА
 const GRAVITY = 0.22;
 const JUMP_FORCE = -7.5;
 const MOVE_SPEED = 4.5;
 const MAX_FALL_SPEED = 10;
-const MAX_GAP = 110; // макс. прыжок игрока
+const MAX_GAP = 110; // макс. прыжок
 
 let player;
 let platforms = [];
@@ -102,22 +105,18 @@ function createPlayer(){
 player={width:60,height:75,x:canvas.width/2-30,y:canvas.height-200,vx:0,vy:0};
 }
 
-// Секторная генерация платформ (каждая новая в пределах MAX_GAP)
+// генерация платформ по секторам
 function createPlatforms(){
 platforms=[];
 let y = canvas.height-50;
-let firstPlatform = {
-x:canvas.width/2-45,
-y:y,
-width:90,height:18,type:"normal",vx:0,broken:false,hasSpring:false
-};
-platforms.push(firstPlatform);
+// первая платформа под игроком
+platforms.push({x:canvas.width/2-45, y:y, width:90, height:18, type:"normal", vx:0, broken:false, hasSpring:false});
 y -= 80;
 for(let i=1;i<12;i++){
-let gap = 80 + Math.random()*30; // 80–110
+let gap = 80+Math.random()*30; // безопасный gap
 let typeRand = Math.random();
-let type = "normal";
-if(i>1){ // первые две платформы безопасные
+let type="normal";
+if(i>1){
 if(typeRand<0.1) type="break";
 else if(typeRand<0.2) type="move";
 }
@@ -130,7 +129,7 @@ vx:type==="move"?2:0,
 broken:false,
 hasSpring:Math.random()<0.1
 });
-y = y-gap;
+y -= gap;
 }
 }
 
@@ -212,6 +211,7 @@ if(player.y>canvas.height){ gameRunning=false; setTimeout(resetGame,500); }
 
 function draw(){
 ctx.clearRect(0,0,canvas.width,canvas.height);
+ctx.drawImage(background,0,0,canvas.width,canvas.height);
 ctx.drawImage(currentImg,player.x,player.y,player.width,player.height);
 for(let p of platforms){
 if(p.broken) continue;
