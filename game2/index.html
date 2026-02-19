@@ -2,15 +2,8 @@
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport"
-content="width=device-width,
-initial-scale=1.0,
-maximum-scale=1.0,
-user-scalable=no,
-viewport-fit=cover">
-
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>Tomato Jump</title>
-
 <style>
 *{
 margin:0;
@@ -21,16 +14,13 @@ user-select:none !important;
 -webkit-touch-callout:none !important;
 -webkit-tap-highlight-color:transparent !important;
 }
-
 html,body{
 overflow:hidden;
 background:#87CEEB;
 touch-action:none;
 font-family:Arial;
 }
-
 canvas{display:block;}
-
 #score{
 position:fixed;
 top:15px;
@@ -41,7 +31,6 @@ font-weight:bold;
 z-index:10;
 pointer-events:none;
 }
-
 #controls{
 position:fixed;
 bottom:20px;
@@ -52,7 +41,6 @@ justify-content:space-between;
 padding:0 30px;
 z-index:10;
 }
-
 .btn{
 width:90px;
 height:90px;
@@ -63,13 +51,11 @@ color:white;
 font-size:36px;
 outline:none;
 }
-
 .btn:active{
 background:rgba(0,0,0,0.6);
 }
 </style>
 </head>
-
 <body>
 
 <div id="score">0</div>
@@ -85,229 +71,203 @@ background:rgba(0,0,0,0.6);
 </audio>
 
 <script>
-
 // блокируем выделение
-document.addEventListener("selectstart", e => e.preventDefault())
-document.addEventListener("contextmenu", e => e.preventDefault())
+document.addEventListener("selectstart", e => e.preventDefault());
+document.addEventListener("contextmenu", e => e.preventDefault());
 
-const canvas = document.getElementById("game")
-const ctx = canvas.getContext("2d")
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
 
 function resize(){
-canvas.width = window.innerWidth
-canvas.height = window.innerHeight
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight;
 }
-resize()
-window.addEventListener("resize", resize)
+resize();
+window.addEventListener("resize", resize);
 
-document.body.addEventListener("touchstart",()=>{
-document.getElementById("music").play()
-},{once:true})
+const imgFall = new Image();
+imgFall.src="player_fall.png";
 
-const imgFall = new Image()
-imgFall.src="player_fall.png"
+const imgJump = new Image();
+imgJump.src="player_jump.png";
 
-const imgJump = new Image()
-imgJump.src="player_jump.png"
+let currentImg = imgFall;
 
-let currentImg = imgFall
+// ФИЗИКА
+const GRAVITY = 0.22;
+const JUMP_FORCE = -7.5;
+const MOVE_SPEED = 4.5;
+const MAX_FALL_SPEED = 10;
+const MAX_PLATFORM_GAP = 110; // максимум прыжка
 
-// ФИЗИКА (сбалансирована под gap)
-const GRAVITY = 0.22
-const JUMP_FORCE = -7.5
-const MOVE_SPEED = 4.5
-const MAX_FALL_SPEED = 10
+let player;
+let platforms = [];
+let score = 0;
+let gameRunning = true;
 
-let player
-let platforms=[]
-let score=0
-let gameRunning=true
-
+// player
 function createPlayer(){
-player={
+player = {
 width:60,
 height:75,
 x:canvas.width/2-30,
 y:canvas.height-200,
 vx:0,
 vy:0
-}
+};
 }
 
+// генерация платформ с секторами
 function createPlatforms(){
-
-platforms=[]
-let y=canvas.height
-
+platforms = [];
+let lastY = canvas.height;
 for(let i=0;i<12;i++){
+let gap = 80 + Math.random()*30; // 80–110px
+let y = lastY - gap;
+let x = Math.random()*(canvas.width-90);
 
-y -= 90 // безопасный gap
+let typeRand = Math.random();
+let type = "normal";
+if(typeRand<0.1) type="break";
+else if(typeRand<0.2) type="move";
 
 platforms.push({
-x:Math.random()*(canvas.width-90),
+x:x,
 y:y,
 width:90,
 height:18,
-type:"normal",
-vx:0,
+type:type,
+vx:type==="move"?2:0,
 broken:false,
-hasSpring:false
-})
+hasSpring: Math.random()<0.1
+});
+lastY = y;
 }
 }
 
 function resetGame(){
-score=0
-createPlayer()
-createPlatforms()
-gameRunning=true
+score=0;
+createPlayer();
+createPlatforms();
+gameRunning=true;
 }
 
-let left=false
-let right=false
+// управление
+let left=false, right=false;
+document.getElementById("left").ontouchstart=e=>{e.preventDefault();left=true;}
+document.getElementById("left").ontouchend=e=>{e.preventDefault();left=false;}
+document.getElementById("right").ontouchstart=e=>{e.preventDefault();right=true;}
+document.getElementById("right").ontouchend=e=>{e.preventDefault();right=false;}
 
-document.getElementById("left").ontouchstart=e=>{e.preventDefault();left=true}
-document.getElementById("left").ontouchend=e=>{e.preventDefault();left=false}
-document.getElementById("right").ontouchstart=e=>{e.preventDefault();right=true}
-document.getElementById("right").ontouchend=e=>{e.preventDefault();right=false}
+// клавиатура
+document.addEventListener("keydown", e=>{
+if(e.key=="ArrowLeft") left=true;
+if(e.key=="ArrowRight") right=true;
+});
+document.addEventListener("keyup", e=>{
+if(e.key=="ArrowLeft") left=false;
+if(e.key=="ArrowRight") right=false;
+});
+
+// музыка
+document.body.addEventListener("touchstart",()=>{
+document.getElementById("music").play();
+},{once:true});
 
 function update(){
+if(!gameRunning) return;
 
-if(!gameRunning) return
+// движение игрока
+if(left) player.vx=-MOVE_SPEED;
+else if(right) player.vx=MOVE_SPEED;
+else player.vx=0;
 
-// движение
-if(left) player.vx=-MOVE_SPEED
-else if(right) player.vx=MOVE_SPEED
-else player.vx=0
-
-player.x+=player.vx
-
-if(player.x<-player.width) player.x=canvas.width
-if(player.x>canvas.width) player.x=-player.width
+player.x += player.vx;
+if(player.x<-player.width) player.x=canvas.width;
+if(player.x>canvas.width) player.x=-player.width;
 
 // гравитация
-player.vy+=GRAVITY
-if(player.vy>MAX_FALL_SPEED) player.vy=MAX_FALL_SPEED
-player.y+=player.vy
+player.vy += GRAVITY;
+if(player.vy>MAX_FALL_SPEED) player.vy=MAX_FALL_SPEED;
+player.y += player.vy;
 
-currentImg = player.vy<0?imgJump:imgFall
+// смена картинки
+currentImg = player.vy<0?imgJump:imgFall;
 
-// столкновения
+// столкновение
 if(player.vy>0){
 for(let p of platforms){
-
-if(p.broken) continue
-
-if(
-player.x+player.width>p.x &&
-player.x<p.x+p.width &&
-player.y+player.height>p.y &&
-player.y+player.height<p.y+p.height
-){
-
-if(p.type==="break"){
-p.broken=true
-}else{
-player.vy=p.hasSpring?JUMP_FORCE*1.5:JUMP_FORCE
-}
+if(p.broken) continue;
+if(player.x+player.width>p.x && player.x<p.x+p.width &&
+player.y+player.height>p.y && player.y+player.height<p.y+p.height){
+if(p.type==="break"){ p.broken=true; }
+else{ player.vy = p.hasSpring ? JUMP_FORCE*1.5 : JUMP_FORCE; }
 }
 }
 }
 
 // движение мира
 if(player.y<canvas.height*0.4){
-let diff=canvas.height*0.4-player.y
-player.y=canvas.height*0.4
+let diff=canvas.height*0.4-player.y;
+player.y=canvas.height*0.4;
+for(let p of platforms) p.y += diff;
+score += Math.floor(diff);
+}
 
+// респавн платформ
 for(let p of platforms){
-p.y+=diff
-}
-
-score+=Math.floor(diff)
-}
-
-// респавн
-for(let i=0;i<platforms.length;i++){
-
-let p=platforms[i]
-
-// движение жёлтых
 if(p.type==="move"){
-p.x+=p.vx
-if(p.x<0||p.x+p.width>canvas.width){
-p.vx*=-1
-}
+p.x += p.vx;
+if(p.x<0 || p.x+p.width>canvas.width) p.vx*=-1;
 }
 
 if(p.y>canvas.height){
+let highest = platforms.reduce((a,b)=>a.y<b.y?a:b);
+let gap = 80+Math.random()*30;
+p.y = highest.y - gap;
+p.x = Math.random()*(canvas.width-p.width);
 
-// ищем самую верхнюю
-let highest=platforms.reduce((a,b)=>a.y<b.y?a:b)
+// типы платформ
+let r = Math.random();
+if(r<0.1) p.type="break";
+else if(r<0.2) { p.type="move"; p.vx=2; }
+else p.type="normal";
 
-p.y=highest.y-(80+Math.random()*25) // 80–105px
-p.x=Math.random()*(canvas.width-p.width)
-
-let r=Math.random()
-
-if(score>2000 && r<0.15){
-p.type="break"
-p.hasSpring=false
-}
-else if(score>1500 && r<0.3){
-p.type="move"
-p.vx=(Math.random()<0.5?-1:1)*2
-p.hasSpring=false
-}
-else{
-p.type="normal"
-p.hasSpring=(Math.random()<0.12)
-}
-
-p.broken=false
+p.broken=false;
+p.hasSpring = Math.random()<0.1;
 }
 }
 
+// падение
 if(player.y>canvas.height){
-gameRunning=false
-setTimeout(resetGame,600)
+gameRunning=false;
+setTimeout(resetGame,500);
 }
-
 }
 
 function draw(){
-
-ctx.clearRect(0,0,canvas.width,canvas.height)
-
-ctx.drawImage(currentImg,player.x,player.y,player.width,player.height)
-
+ctx.clearRect(0,0,canvas.width,canvas.height);
+ctx.drawImage(currentImg,player.x,player.y,player.width,player.height);
 for(let p of platforms){
+if(p.broken) continue;
+if(p.type==="break") ctx.fillStyle="#e74c3c";
+else if(p.type==="move") ctx.fillStyle="#f1c40f";
+else ctx.fillStyle="#2ecc71";
 
-if(p.broken) continue
-
-if(p.type==="break") ctx.fillStyle="#e74c3c"
-else if(p.type==="move") ctx.fillStyle="#f1c40f"
-else ctx.fillStyle="#2ecc71"
-
-ctx.fillRect(p.x,p.y,p.width,p.height)
+ctx.fillRect(p.x,p.y,p.width,p.height);
 
 if(p.hasSpring){
-ctx.fillStyle="white"
-ctx.fillRect(p.x+p.width/2-5,p.y-10,10,10)
+ctx.fillStyle="white";
+ctx.fillRect(p.x+p.width/2-5,p.y-10,10,10);
 }
 }
-
-document.getElementById("score").innerText=score
+document.getElementById("score").innerText=score;
 }
 
-function loop(){
-update()
-draw()
-requestAnimationFrame(loop)
-}
+function loop(){ update(); draw(); requestAnimationFrame(loop); }
 
-resetGame()
-loop()
-
+resetGame();
+loop();
 </script>
 </body>
 </html>
