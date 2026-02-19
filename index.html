@@ -1,297 +1,314 @@
 <!DOCTYPE html>
-<html>
+<html lang="ru">
 <head>
 <meta charset="UTF-8">
 
-<meta name="viewport"
-content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<!-- фиксирует масштаб и запрещает zoom -->
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 
 <title>IljaClicker</title>
 
 <style>
 
-html, body {
-    margin: 0;
-    padding: 0;
-    background-color: #111;
-    color: white;
-    font-family: Arial;
-    height: 100%;
-    overflow: hidden;
+html, body{
+    margin:0;
+    padding:0;
+    background:#111;
+    color:white;
+    font-family:Arial;
+    overflow:hidden;
 
     touch-action: manipulation;
 }
 
-body {
-    display: flex;
+/* главный контейнер */
+.container{
+    display:flex;
+    height:100vh;
+    width:100vw;
 }
 
-/* игра */
-#gameArea {
-    flex: 3;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
+/* левая часть */
+.left{
+    flex:1;
+    display:flex;
+    flex-direction:column;
+    justify-content:center;
+    align-items:center;
 }
 
-/* магазин */
-#shop {
-    flex: 1;
-    background-color: #222;
-    padding: 20px;
+/* счет */
+#score{
+    font-size:28px;
+    margin-bottom:10px;
 }
 
-#score {
-    font-size: 48px;
-    margin-bottom: 20px;
+/* контейнер картинки */
+.imageContainer{
+    position:relative;
 }
 
-#imageContainer {
-    position: relative;
-}
+/* картинка */
+#image{
 
-/* фото */
-#image {
-    width: 600px;
-    display: block;
+    width:60vw;
+    max-width:320px;
+    height:auto;
 
-    user-select: none;
-    -webkit-user-select: none;
-    -webkit-user-drag: none;
+    border-radius:20px;
+
+    user-select:none;
+    -webkit-user-drag:none;
+    -webkit-tap-highlight-color: transparent;
 
     touch-action: manipulation;
+
+    transition: transform 0.1s;
+}
+
+/* эффект увеличения */
+#image:active{
+    transform: scale(1.08);
 }
 
 /* ripple */
-.ripple {
-    position: absolute;
-    border-radius: 50%;
-    border: 3px solid cyan;
-    width: 100px;
-    height: 100px;
-    transform: scale(0);
-    animation: ripple 0.5s linear;
+.ripple{
+
+    position:absolute;
+    border-radius:50%;
+    border:3px solid white;
+
+    width:20px;
+    height:20px;
+
+    animation:rippleAnim 0.5s linear;
 }
 
-@keyframes ripple {
-    to {
-        transform: scale(4);
-        opacity: 0;
+@keyframes rippleAnim{
+
+    from{
+        transform:scale(1);
+        opacity:1;
     }
-}
 
-/* текст */
-.plus {
-    position: absolute;
-    color: lime;
-    font-size: 30px;
-    animation: float 0.8s forwards;
-}
-
-@keyframes float {
-    to {
-        transform: translateY(-80px);
-        opacity: 0;
+    to{
+        transform:scale(6);
+        opacity:0;
     }
+
 }
 
-/* рыбий глаз */
-.lens {
-    position: absolute;
-    width: 180px;
-    height: 180px;
-    border-radius: 50%;
-    overflow: hidden;
-    animation: lensAnim 0.3s forwards;
+/* +очки */
+.plus{
+
+    position:absolute;
+    color:#00ff99;
+    font-weight:bold;
+
+    animation:plusAnim 0.6s linear;
 }
 
-.lens img {
-    position: absolute;
-    width: 600px;
-    transform: scale(1.4);
-}
+@keyframes plusAnim{
 
-@keyframes lensAnim {
-    to {
-        transform: scale(1.2);
-        opacity: 0;
+    from{
+        transform:translateY(0);
+        opacity:1;
     }
+
+    to{
+        transform:translateY(-40px);
+        opacity:0;
+    }
+
+}
+
+/* магазин */
+.shop{
+
+    width:40vw;
+    max-width:200px;
+
+    background:#222;
+
+    padding:10px;
+
+    display:flex;
+    flex-direction:column;
 }
 
 /* кнопки */
-.upgrade {
-    width: 100%;
-    padding: 15px;
-    margin-bottom: 10px;
-    font-size: 20px;
+button{
+
+    margin:5px 0;
+    padding:10px;
+
+    font-size:16px;
+
+    border:none;
+    border-radius:10px;
+
+    background:#444;
+    color:white;
 }
 
-.upgrade:disabled {
-    opacity: 0.5;
+button:disabled{
+    background:#222;
+    color:#777;
 }
 
 </style>
-</head>
 
+</head>
 <body>
 
-<div id="gameArea">
+<div class="container">
 
-<div id="score">0</div>
+<div class="left">
 
-<div id="imageContainer">
-<img src="brother.png" id="image">
+<div id="score">Очки: 0</div>
+
+<div class="imageContainer">
+
+<img src="brother.jpg" id="image">
+
+</div>
+
+</div>
+
+<div class="shop">
+
+<div>Апгрейды</div>
+
+<button id="double">Двойной клик (100)</button>
+
+<button id="triple">Тройной клик (300)</button>
+
 </div>
 
 </div>
 
-<div id="shop">
-
-<h2>Апгрейды</h2>
-
-<button id="upgrade2" class="upgrade">
-Двойной клик (100)
-</button>
-
-<button id="upgrade3" class="upgrade">
-Тройной клик (300)
-</button>
-
-</div>
+<audio id="sound" src="click.mp3"></audio>
 
 <script>
 
 let score = 0;
 let clickValue = 1;
 
-let bought2 = false;
-let bought3 = false;
-
-let image = document.getElementById("image");
-let container = document.getElementById("imageContainer");
+let doubleBought = false;
+let tripleBought = false;
 
 let scoreText = document.getElementById("score");
 
-let upgrade2 = document.getElementById("upgrade2");
-let upgrade3 = document.getElementById("upgrade3");
+let image = document.getElementById("image");
 
-/* звук */
-function sound()
-{
-    let a = new Audio("click.mp3");
-    a.volume = 0.2;
-    a.play();
+let sound = document.getElementById("sound");
+
+let doubleBtn = document.getElementById("double");
+let tripleBtn = document.getElementById("triple");
+
+
+function update(){
+
+scoreText.innerText = "Очки: " + score;
+
+if(doubleBought)
+doubleBtn.disabled = true;
+else
+doubleBtn.disabled = score < 100;
+
+
+if(tripleBought)
+tripleBtn.disabled = true;
+else
+tripleBtn.disabled = score < 300;
+
 }
 
-/* обновление кнопок */
-function updateButtons()
-{
-    if(!bought2)
-        upgrade2.disabled = score < 100;
-    else
-        upgrade2.disabled = true;
 
-    if(!bought3)
-        upgrade3.disabled = score < 300;
-    else
-        upgrade3.disabled = true;
-}
+// тап
+image.addEventListener("click", function(e){
 
-/* клик */
-image.addEventListener("pointerdown", function(e)
-{
-    e.preventDefault();
+score += clickValue;
 
-    score += clickValue;
+sound.currentTime = 0;
+sound.play();
 
-    scoreText.innerText = score;
+let rect = image.getBoundingClientRect();
 
-    sound();
+let x = e.clientX - rect.left;
+let y = e.clientY - rect.top;
 
-    let rect = container.getBoundingClientRect();
 
-    let x = e.clientX - rect.left;
-    let y = e.clientY - rect.top;
+// ripple
+let ripple = document.createElement("div");
+ripple.className = "ripple";
+ripple.style.left = x + "px";
+ripple.style.top = y + "px";
 
-    /* ripple */
-    let r = document.createElement("div");
-    r.className = "ripple";
-    r.style.left = (x-50)+"px";
-    r.style.top = (y-50)+"px";
+image.parentElement.appendChild(ripple);
 
-    container.appendChild(r);
+setTimeout(()=>{
+ripple.remove();
+},500);
 
-    setTimeout(()=>r.remove(),500);
 
-    /* текст */
-    let p = document.createElement("div");
-    p.className = "plus";
-    p.innerText = "+"+clickValue;
+// +очки
+let plus = document.createElement("div");
+plus.className = "plus";
+plus.innerText = "+" + clickValue;
 
-    p.style.left = x+"px";
-    p.style.top = y+"px";
+plus.style.left = x + "px";
+plus.style.top = y + "px";
 
-    container.appendChild(p);
+image.parentElement.appendChild(plus);
 
-    setTimeout(()=>p.remove(),800);
+setTimeout(()=>{
+plus.remove();
+},600);
 
-    /* линза */
-    let lens = document.createElement("div");
-    lens.className = "lens";
 
-    lens.style.left = (x-90)+"px";
-    lens.style.top = (y-90)+"px";
+update();
 
-    let img = document.createElement("img");
-
-    img.src = image.src;
-
-    img.style.left = -(x-90)*1.4+"px";
-    img.style.top = -(y-90)*1.4+"px";
-
-    lens.appendChild(img);
-
-    container.appendChild(lens);
-
-    setTimeout(()=>lens.remove(),300);
-
-    updateButtons();
 });
 
-/* двойной */
-upgrade2.onclick = function()
-{
-    if(score>=100 && !bought2)
-    {
-        score-=100;
-        clickValue=2;
-        bought2=true;
 
-        scoreText.innerText=score;
+// двойной
+doubleBtn.onclick = function(){
 
-        upgrade2.innerText="Куплено";
-        upgrade2.disabled=true;
-    }
+if(score >= 100 && !doubleBought){
+
+score -= 100;
+
+clickValue = 2;
+
+doubleBought = true;
+
+update();
+
 }
 
-/* тройной */
-upgrade3.onclick=function()
-{
-    if(score>=300 && !bought3)
-    {
-        score-=300;
-        clickValue=3;
-        bought3=true;
+};
 
-        scoreText.innerText=score;
 
-        upgrade3.innerText="Куплено";
-        upgrade3.disabled=true;
-    }
+// тройной
+tripleBtn.onclick = function(){
+
+if(score >= 300 && !tripleBought){
+
+score -= 300;
+
+clickValue = 3;
+
+tripleBought = true;
+
+update();
+
 }
 
-updateButtons();
+};
+
+
+update();
 
 </script>
 
