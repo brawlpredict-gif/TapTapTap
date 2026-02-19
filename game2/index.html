@@ -1,22 +1,16 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-
 <meta charset="UTF-8">
-
 <meta name="viewport"
-content="
-width=device-width,
+content="width=device-width,
 initial-scale=1.0,
 maximum-scale=1.0,
 user-scalable=no,
-viewport-fit=cover
-">
-
+viewport-fit=cover">
 <title>Tomato Jump</title>
 
 <style>
-
 html,body{
 margin:0;
 padding:0;
@@ -25,15 +19,7 @@ background:#87CEEB;
 touch-action:none;
 font-family:Arial;
 }
-
-/* CANVAS */
-
-canvas{
-display:block;
-}
-
-/* SCORE */
-
+canvas{display:block;}
 #score{
 position:fixed;
 top:15px;
@@ -43,61 +29,38 @@ color:white;
 font-weight:bold;
 z-index:10;
 }
-
-/* CONTROLS */
-
 #controls{
-
 position:fixed;
 bottom:20px;
 left:0;
 width:100%;
-
 display:flex;
 justify-content:space-between;
-
 padding:0 30px;
-
 box-sizing:border-box;
-
 z-index:10;
 }
-
 .btn{
-
 width:90px;
 height:90px;
-
 border-radius:50%;
-
 border:none;
-
 background:rgba(0,0,0,0.35);
-
 color:white;
-
 font-size:36px;
-
 }
-
-.btn:active{
-background:rgba(0,0,0,0.6);
-}
-
+.btn:active{background:rgba(0,0,0,0.6);}
 </style>
-
 </head>
+
 <body>
 
 <div id="score">0</div>
-
 <canvas id="game"></canvas>
 
 <div id="controls">
-
 <button class="btn" id="left">←</button>
 <button class="btn" id="right">→</button>
-
 </div>
 
 <audio id="music" loop>
@@ -106,23 +69,15 @@ background:rgba(0,0,0,0.6);
 
 <script>
 
-// CANVAS
-
 const canvas = document.getElementById("game")
 const ctx = canvas.getContext("2d")
 
 function resize(){
-
 canvas.width = window.innerWidth
 canvas.height = window.innerHeight
-
 }
-
 resize()
-
 window.addEventListener("resize", resize)
-
-// IMAGES
 
 const imgFall = new Image()
 imgFall.src="player_fall.png"
@@ -132,287 +87,203 @@ imgJump.src="player_jump.png"
 
 let currentImg = imgFall
 
-// PLAYER
+// ===== PHYSICS =====
+const GRAVITY = 0.28
+const JUMP_FORCE = -8.5
+const MOVE_SPEED = 4.5
+const MAX_FALL_SPEED = 12
 
 let player
-
-// GAME VARS
-
-let gravity = 0.5
-
 let platforms = []
-
 let score = 0
-
+let difficulty = 1
 let gameRunning = true
 
-// CREATE PLAYER
-
 function createPlayer(){
-
 player = {
-
-x: canvas.width/2 - 35,
-y: canvas.height - 200,
-
-width:70,
-height:70,
-
+width:60,
+height:75,
+x:canvas.width/2-30,
+y:canvas.height-200,
 vx:0,
-vy:-15
-
+vy:0
 }
-
 }
-
-// CREATE PLATFORMS
 
 function createPlatforms(){
-
-platforms = []
-
-let count = 18 // было 12, теперь больше
-
-let spacing = canvas.height / count
+platforms=[]
+let count=12
+let spacing=canvas.height/count
 
 for(let i=0;i<count;i++){
+createPlatform(i*spacing)
+}
+}
 
-let x = Math.random()*(canvas.width-100)
-let y = i*spacing
+function createPlatform(y){
+let type="normal"
 
-platforms.push({
+let breakChance = Math.min(0.3, score/5000)
+let moveChance = Math.min(0.25, score/4000)
+let springChance = Math.min(0.2, score/6000)
 
-x:x,
+let r=Math.random()
+
+if(r<breakChance) type="break"
+else if(r<breakChance+moveChance) type="move"
+
+let platform={
+x:Math.random()*(canvas.width-90),
 y:y,
-
-width:100,
-height:20
-
-})
-
+width:90,
+height:18,
+type:type,
+vx:(Math.random()<0.5?-1:1)*(1+difficulty*0.3),
+broken:false,
+hasSpring:(Math.random()<springChance)
 }
 
-// ВАЖНО: гарантированная платформа под игроком
-
-platforms.push({
-
-x: player.x,
-y: player.y + 80,
-
-width:120,
-height:20
-
-})
-
+platforms.push(platform)
 }
-
-// RESET GAME
 
 function resetGame(){
-
-score = 0
-
+score=0
+difficulty=1
 createPlayer()
-
 createPlatforms()
-
-gameRunning = true
-
+gameRunning=true
 }
-
-// CONTROLS
 
 let left=false
 let right=false
 
-const leftBtn = document.getElementById("left")
-const rightBtn = document.getElementById("right")
+document.getElementById("left").ontouchstart=()=>left=true
+document.getElementById("left").ontouchend=()=>left=false
+document.getElementById("right").ontouchstart=()=>right=true
+document.getElementById("right").ontouchend=()=>right=false
 
-leftBtn.ontouchstart=()=>left=true
-leftBtn.ontouchend=()=>left=false
-
-rightBtn.ontouchstart=()=>right=true
-rightBtn.ontouchend=()=>right=false
-
-// keyboard support
-
-document.addEventListener("keydown", e=>{
-
+document.addEventListener("keydown",e=>{
 if(e.key=="ArrowLeft") left=true
 if(e.key=="ArrowRight") right=true
-
 })
-
-document.addEventListener("keyup", e=>{
-
+document.addEventListener("keyup",e=>{
 if(e.key=="ArrowLeft") left=false
 if(e.key=="ArrowRight") right=false
-
 })
 
-// MUSIC START
-
-document.body.addEventListener("touchstart", ()=>{
-
+document.body.addEventListener("touchstart",()=>{
 document.getElementById("music").play()
-
-}, {once:true})
-
-// UPDATE
+},{once:true})
 
 function update(){
 
 if(!gameRunning) return
 
-// MOVE
+if(left) player.vx=-MOVE_SPEED
+else if(right) player.vx=MOVE_SPEED
+else player.vx=0
 
-if(left) player.vx = -6
-else if(right) player.vx = 6
-else player.vx = 0
+player.x+=player.vx
 
-player.x += player.vx
+if(player.x<-player.width) player.x=canvas.width
+if(player.x>canvas.width) player.x=-player.width
 
-// wrap
+player.vy+=GRAVITY
+if(player.vy>MAX_FALL_SPEED) player.vy=MAX_FALL_SPEED
+player.y+=player.vy
 
-if(player.x < -player.width)
-player.x = canvas.width
+currentImg=imgFall
 
-if(player.x > canvas.width)
-player.x = -player.width
-
-// gravity
-
-player.vy += gravity
-player.y += player.vy
-
-// default image
-
-currentImg = imgFall
-
-// collision
-
+if(player.vy>0){
 platforms.forEach(p=>{
+if(p.broken) return
 
 if(
-
-player.vy > 0 &&
-player.x + player.width > p.x &&
-player.x < p.x + p.width &&
-player.y + player.height > p.y &&
-player.y + player.height < p.y + p.height + 10
-
+player.x+player.width>p.x &&
+player.x<p.x+p.width &&
+player.y+player.height>p.y &&
+player.y+player.height<p.y+p.height
 ){
 
-player.vy = -15
-
-currentImg = imgJump
-
-score += 10
-
+if(p.type=="break"){
+p.broken=true
+}else{
+player.vy = p.hasSpring ? JUMP_FORCE*1.8 : JUMP_FORCE
+currentImg=imgJump
+}
+}
+})
 }
 
+if(player.y<canvas.height*0.4){
+let diff=canvas.height*0.4-player.y
+player.y=canvas.height*0.4
+
+platforms.forEach(p=>{
+p.y+=diff
 })
 
-// move world
-
-if(player.y < canvas.height/2){
-
-let diff = canvas.height/2 - player.y
-
-player.y = canvas.height/2
+score+=Math.floor(diff)
+difficulty=1+score/3000
+}
 
 platforms.forEach(p=>{
 
-p.y += diff
-
-if(p.y > canvas.height){
-
-p.y = -20
-
-// ограничиваем максимальную дистанцию прыжка
-let maxJumpDistance = 180
-
-let minX = player.x - maxJumpDistance
-let maxX = player.x + maxJumpDistance
-
-if(minX < 0) minX = 0
-if(maxX > canvas.width-100) maxX = canvas.width-100
-
-p.x = minX + Math.random()*(maxX-minX)
-
+if(p.type=="move"){
+p.x+=p.vx
+if(p.x<0 || p.x+p.width>canvas.width){
+p.vx*=-1
+}
 }
 
+if(p.y>canvas.height){
+createPlatform(-20)
+p.y=9999
+}
 })
 
-}
-
-// FALL = GAME OVER
-
-if(player.y > canvas.height){
-
-gameRunning = false
-
-setTimeout(resetGame, 500)
-
+if(player.y>canvas.height){
+gameRunning=false
+setTimeout(resetGame,500)
 }
 
 }
-
-// DRAW
 
 function draw(){
 
 ctx.clearRect(0,0,canvas.width,canvas.height)
 
-// player
-
-ctx.drawImage(
-currentImg,
-player.x,
-player.y,
-player.width,
-player.height
-)
-
-// platforms
-
-ctx.fillStyle="#2ecc71"
+ctx.drawImage(currentImg,player.x,player.y,player.width,player.height)
 
 platforms.forEach(p=>{
 
-ctx.fillRect(
-p.x,
-p.y,
-p.width,
-p.height
-)
+if(p.broken) return
+
+if(p.type=="break") ctx.fillStyle="#e74c3c"
+else if(p.type=="move") ctx.fillStyle="#f1c40f"
+else ctx.fillStyle="#2ecc71"
+
+ctx.fillRect(p.x,p.y,p.width,p.height)
+
+if(p.hasSpring){
+ctx.fillStyle="white"
+ctx.fillRect(p.x+p.width/2-5,p.y-10,10,10)
+}
 
 })
 
-// score
-
-document.getElementById("score").innerText = score
-
+document.getElementById("score").innerText=score
 }
-
-// LOOP
 
 function loop(){
-
 update()
 draw()
-
 requestAnimationFrame(loop)
-
 }
 
-// START
-
 resetGame()
-
 loop()
 
 </script>
-
 </body>
 </html>
