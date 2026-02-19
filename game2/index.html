@@ -87,7 +87,7 @@ imgJump.src="player_jump.png"
 
 let currentImg = imgFall
 
-// ===== PHYSICS =====
+// ===== DOODLE PHYSICS =====
 const GRAVITY = 0.28
 const JUMP_FORCE = -8.5
 const MOVE_SPEED = 4.5
@@ -111,39 +111,26 @@ vy:0
 }
 
 function createPlatforms(){
-platforms=[]
-let count=12
-let spacing=canvas.height/count
+
+platforms = []
+let count = 12
+let spacing = canvas.height / count
 
 for(let i=0;i<count;i++){
-createPlatform(i*spacing)
-}
-}
 
-function createPlatform(y){
-let type="normal"
-
-let breakChance = Math.min(0.3, score/5000)
-let moveChance = Math.min(0.25, score/4000)
-let springChance = Math.min(0.2, score/6000)
-
-let r=Math.random()
-
-if(r<breakChance) type="break"
-else if(r<breakChance+moveChance) type="move"
-
-let platform={
+platforms.push({
 x:Math.random()*(canvas.width-90),
-y:y,
+y:i*spacing,
 width:90,
 height:18,
-type:type,
-vx:(Math.random()<0.5?-1:1)*(1+difficulty*0.3),
+type:"normal",
+vx:0,
 broken:false,
-hasSpring:(Math.random()<springChance)
+hasSpring:false
+})
+
 }
 
-platforms.push(platform)
 }
 
 function resetGame(){
@@ -179,6 +166,7 @@ function update(){
 
 if(!gameRunning) return
 
+// движение
 if(left) player.vx=-MOVE_SPEED
 else if(right) player.vx=MOVE_SPEED
 else player.vx=0
@@ -188,15 +176,20 @@ player.x+=player.vx
 if(player.x<-player.width) player.x=canvas.width
 if(player.x>canvas.width) player.x=-player.width
 
+// гравитация
 player.vy+=GRAVITY
 if(player.vy>MAX_FALL_SPEED) player.vy=MAX_FALL_SPEED
 player.y+=player.vy
 
 currentImg=imgFall
 
+// столкновение
 if(player.vy>0){
-platforms.forEach(p=>{
-if(p.broken) return
+
+for(let i=0;i<platforms.length;i++){
+
+let p=platforms[i]
+if(p.broken) continue
 
 if(
 player.x+player.width>p.x &&
@@ -205,61 +198,76 @@ player.y+player.height>p.y &&
 player.y+player.height<p.y+p.height
 ){
 
-if(p.type=="break"){
+if(p.type==="break"){
 p.broken=true
-}else{
+}
+else{
 player.vy = p.hasSpring ? JUMP_FORCE*1.8 : JUMP_FORCE
 currentImg=imgJump
 }
+
 }
-})
+}
 }
 
+// движение мира
 if(player.y<canvas.height*0.4){
+
 let diff=canvas.height*0.4-player.y
 player.y=canvas.height*0.4
 
-platforms.forEach(p=>{
-p.y+=diff
-})
+for(let i=0;i<platforms.length;i++){
+platforms[i].y+=diff
+}
 
 score+=Math.floor(diff)
 difficulty=1+score/3000
 }
 
-platforms.forEach(p=>{
+// платформы
+for(let i=0;i<platforms.length;i++){
 
-if(p.type=="move"){
+let p=platforms[i]
+
+// движение двигающихся
+if(p.type==="move"){
 p.x+=p.vx
-if(p.x<0 || p.x+p.width>canvas.width){
+if(p.x<0||p.x+p.width>canvas.width){
 p.vx*=-1
 }
 }
 
-if(p.y > canvas.height){
+// если ушла вниз — переиспользуем её
+if(p.y>canvas.height){
 
-    // переспавн этой же платформы
-    p.y = -20
-    p.x = Math.random() * (canvas.width - p.width)
+p.y=-20
+p.x=Math.random()*(canvas.width-p.width)
 
-    // перерасчёт типа с учётом сложности
-    let breakChance = Math.min(0.3, score/5000)
-    let moveChance = Math.min(0.25, score/4000)
-    let springChance = Math.min(0.2, score/6000)
+// сложность
+let breakChance=Math.min(0.3,score/5000)
+let moveChance=Math.min(0.25,score/4000)
+let springChance=Math.min(0.2,score/6000)
 
-    let r = Math.random()
+let r=Math.random()
 
-    if(r < breakChance) p.type = "break"
-    else if(r < breakChance + moveChance) p.type = "move"
-    else p.type = "normal"
-
-    p.broken = false
-    p.hasSpring = (Math.random() < springChance)
-
-    p.vx = (Math.random()<0.5?-1:1)*(1+difficulty*0.3)
+if(r<breakChance){
+p.type="break"
 }
-})
+else if(r<breakChance+moveChance){
+p.type="move"
+p.vx=(Math.random()<0.5?-1:1)*(1+difficulty*0.3)
+}
+else{
+p.type="normal"
+}
 
+p.broken=false
+p.hasSpring=(Math.random()<springChance)
+}
+
+}
+
+// game over
 if(player.y>canvas.height){
 gameRunning=false
 setTimeout(resetGame,500)
@@ -273,12 +281,13 @@ ctx.clearRect(0,0,canvas.width,canvas.height)
 
 ctx.drawImage(currentImg,player.x,player.y,player.width,player.height)
 
-platforms.forEach(p=>{
+for(let i=0;i<platforms.length;i++){
 
-if(p.broken) return
+let p=platforms[i]
+if(p.broken) continue
 
-if(p.type=="break") ctx.fillStyle="#e74c3c"
-else if(p.type=="move") ctx.fillStyle="#f1c40f"
+if(p.type==="break") ctx.fillStyle="#e74c3c"
+else if(p.type==="move") ctx.fillStyle="#f1c40f"
 else ctx.fillStyle="#2ecc71"
 
 ctx.fillRect(p.x,p.y,p.width,p.height)
@@ -288,7 +297,7 @@ ctx.fillStyle="white"
 ctx.fillRect(p.x+p.width/2-5,p.y-10,10,10)
 }
 
-})
+}
 
 document.getElementById("score").innerText=score
 }
