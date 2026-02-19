@@ -3,7 +3,6 @@
 <head>
 <meta charset="UTF-8">
 
-<!-- отключает zoom на телефоне -->
 <meta name="viewport"
 content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 
@@ -11,18 +10,23 @@ content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable
 
 <style>
 
-body {
+html, body {
     margin: 0;
-    font-family: Arial, sans-serif;
+    padding: 0;
     background-color: #111;
     color: white;
-    display: flex;
-    height: 100vh;
+    font-family: Arial;
+    height: 100%;
     overflow: hidden;
+
     touch-action: manipulation;
 }
 
-/* игровая зона */
+body {
+    display: flex;
+}
+
+/* игра */
 #gameArea {
     flex: 3;
     display: flex;
@@ -36,7 +40,6 @@ body {
     flex: 1;
     background-color: #222;
     padding: 20px;
-    box-sizing: border-box;
 }
 
 #score {
@@ -44,61 +47,52 @@ body {
     margin-bottom: 20px;
 }
 
-/* контейнер фото */
 #imageContainer {
     position: relative;
-    display: inline-block;
-    overflow: hidden;
 }
 
 /* фото */
 #image {
     width: 600px;
-    user-select: none;
     display: block;
-    cursor: pointer;
+
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-user-drag: none;
 
     touch-action: manipulation;
-    -webkit-user-drag: none;
-    -webkit-tap-highlight-color: transparent;
 }
 
 /* ripple */
 .ripple {
     position: absolute;
     border-radius: 50%;
-    border: 3px solid rgba(0,255,255,0.7);
+    border: 3px solid cyan;
     width: 100px;
     height: 100px;
     transform: scale(0);
-    animation: rippleAnim 0.5s linear;
+    animation: ripple 0.5s linear;
 }
 
-@keyframes rippleAnim {
+@keyframes ripple {
     to {
         transform: scale(4);
         opacity: 0;
     }
 }
 
-/* +очки */
-.plusOne {
+/* текст */
+.plus {
     position: absolute;
-    color: #00ff88;
-    font-size: 32px;
-    font-weight: bold;
-    pointer-events: none;
-    animation: floatUp 0.8s ease-out forwards;
+    color: lime;
+    font-size: 30px;
+    animation: float 0.8s forwards;
 }
 
-@keyframes floatUp {
-    from {
-        opacity: 1;
-        transform: translateY(0);
-    }
+@keyframes float {
     to {
-        opacity: 0;
         transform: translateY(-80px);
+        opacity: 0;
     }
 }
 
@@ -109,8 +103,7 @@ body {
     height: 180px;
     border-radius: 50%;
     overflow: hidden;
-    pointer-events: none;
-    animation: lensAnim 0.35s ease-out forwards;
+    animation: lensAnim 0.3s forwards;
 }
 
 .lens img {
@@ -120,29 +113,21 @@ body {
 }
 
 @keyframes lensAnim {
-    0% {
-        transform: scale(0.5);
-        opacity: 0.9;
-    }
-    100% {
+    to {
         transform: scale(1.2);
         opacity: 0;
     }
 }
 
 /* кнопки */
-.upgradeButton {
+.upgrade {
     width: 100%;
     padding: 15px;
-    margin-bottom: 15px;
-    font-size: 22px;
-    background-color: #00ff88;
-    color: black;
-    border: none;
-    border-radius: 10px;
+    margin-bottom: 10px;
+    font-size: 20px;
 }
 
-.upgradeButton:disabled {
+.upgrade:disabled {
     opacity: 0.5;
 }
 
@@ -163,13 +148,13 @@ body {
 
 <div id="shop">
 
-<h2>Магазин</h2>
+<h2>Апгрейды</h2>
 
-<button class="upgradeButton" id="doubleBtn">
+<button id="upgrade2" class="upgrade">
 Двойной клик (100)
 </button>
 
-<button class="upgradeButton" id="tripleBtn">
+<button id="upgrade3" class="upgrade">
 Тройной клик (300)
 </button>
 
@@ -180,38 +165,49 @@ body {
 let score = 0;
 let clickValue = 1;
 
+let bought2 = false;
+let bought3 = false;
+
 let image = document.getElementById("image");
 let container = document.getElementById("imageContainer");
 
-let scoreDiv = document.getElementById("score");
+let scoreText = document.getElementById("score");
 
-let doubleBtn = document.getElementById("doubleBtn");
-let tripleBtn = document.getElementById("tripleBtn");
+let upgrade2 = document.getElementById("upgrade2");
+let upgrade3 = document.getElementById("upgrade3");
 
 /* звук */
-function playSound()
+function sound()
 {
-    let audio = new Audio("click.mp3");
-    audio.volume = 0.3;
-    audio.play();
+    let a = new Audio("click.mp3");
+    a.volume = 0.2;
+    a.play();
 }
 
 /* обновление кнопок */
 function updateButtons()
 {
-    doubleBtn.disabled = score < 100;
-    tripleBtn.disabled = score < 300;
+    if(!bought2)
+        upgrade2.disabled = score < 100;
+    else
+        upgrade2.disabled = true;
+
+    if(!bought3)
+        upgrade3.disabled = score < 300;
+    else
+        upgrade3.disabled = true;
 }
 
-/* тап */
+/* клик */
 image.addEventListener("pointerdown", function(e)
 {
     e.preventDefault();
 
     score += clickValue;
-    scoreDiv.innerText = score;
 
-    playSound();
+    scoreText.innerText = score;
+
+    sound();
 
     let rect = container.getBoundingClientRect();
 
@@ -219,75 +215,79 @@ image.addEventListener("pointerdown", function(e)
     let y = e.clientY - rect.top;
 
     /* ripple */
-    let ripple = document.createElement("div");
+    let r = document.createElement("div");
+    r.className = "ripple";
+    r.style.left = (x-50)+"px";
+    r.style.top = (y-50)+"px";
 
-    ripple.className = "ripple";
-    ripple.style.left = (x - 50) + "px";
-    ripple.style.top = (y - 50) + "px";
+    container.appendChild(r);
 
-    container.appendChild(ripple);
+    setTimeout(()=>r.remove(),500);
 
-    setTimeout(()=>ripple.remove(),500);
+    /* текст */
+    let p = document.createElement("div");
+    p.className = "plus";
+    p.innerText = "+"+clickValue;
 
-    /* +очки */
-    let plus = document.createElement("div");
+    p.style.left = x+"px";
+    p.style.top = y+"px";
 
-    plus.className = "plusOne";
-    plus.innerText = "+" + clickValue;
+    container.appendChild(p);
 
-    plus.style.left = x + "px";
-    plus.style.top = y + "px";
+    setTimeout(()=>p.remove(),800);
 
-    container.appendChild(plus);
-
-    setTimeout(()=>plus.remove(),800);
-
-    /* рыбий глаз */
+    /* линза */
     let lens = document.createElement("div");
-
     lens.className = "lens";
-    lens.style.left = (x - 90) + "px";
-    lens.style.top = (y - 90) + "px";
 
-    let zoom = document.createElement("img");
+    lens.style.left = (x-90)+"px";
+    lens.style.top = (y-90)+"px";
 
-    zoom.src = image.src;
+    let img = document.createElement("img");
 
-    zoom.style.left = -(x - 90) * 1.4 + "px";
-    zoom.style.top = -(y - 90) * 1.4 + "px";
+    img.src = image.src;
 
-    lens.appendChild(zoom);
+    img.style.left = -(x-90)*1.4+"px";
+    img.style.top = -(y-90)*1.4+"px";
+
+    lens.appendChild(img);
 
     container.appendChild(lens);
 
-    setTimeout(()=>lens.remove(),350);
+    setTimeout(()=>lens.remove(),300);
 
     updateButtons();
 });
 
 /* двойной */
-doubleBtn.onclick = function()
+upgrade2.onclick = function()
 {
-    if(score >= 100)
+    if(score>=100 && !bought2)
     {
-        score -= 100;
-        clickValue = 2;
-        scoreDiv.innerText = score;
-        doubleBtn.disabled = true;
-        updateButtons();
+        score-=100;
+        clickValue=2;
+        bought2=true;
+
+        scoreText.innerText=score;
+
+        upgrade2.innerText="Куплено";
+        upgrade2.disabled=true;
     }
 }
 
 /* тройной */
-tripleBtn.onclick = function()
+upgrade3.onclick=function()
 {
-    if(score >= 300)
+    if(score>=300 && !bought3)
     {
-        score -= 300;
-        clickValue = 3;
-        scoreDiv.innerText = score;
-        tripleBtn.disabled = true;
-        updateButtons();
+        score-=300;
+        clickValue=3;
+        bought3=true;
+
+        scoreText.innerText=score;
+
+        upgrade3.innerText="Куплено";
+        upgrade3.disabled=true;
     }
 }
 
