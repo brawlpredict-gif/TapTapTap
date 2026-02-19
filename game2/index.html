@@ -21,7 +21,9 @@ canvas{display:block;}
 <button class="btn" id="left">←</button>
 <button class="btn" id="right">→</button>
 </div>
-<audio id="music" loop><source src="music.mp3"></audio>
+<audio id="music" loop>
+<source src="music.mp3">
+</audio>
 <script>
 // блокируем выделение
 document.addEventListener("selectstart", e => e.preventDefault());
@@ -46,36 +48,47 @@ const GRAVITY = 0.22;
 const JUMP_FORCE = -7.5;
 const MOVE_SPEED = 4.5;
 const MAX_FALL_SPEED = 10;
-const MAX_JUMP = Math.abs(JUMP_FORCE)*MAX_FALL_SPEED/GRAVITY; // реально достижимая высота
 
+const MAX_GAP = Math.abs(JUMP_FORCE*20); // максимально достижимое расстояние по Y (подгоняем по гравитации)
+
+// Игрок и платформы
 let player;
 let platforms = [];
 let score = 0;
 let gameRunning = true;
 
 function createPlayer(){
-player={width:60,height:75,x:canvas.width/2-30,y:canvas.height-200,vx:0,vy:0};
+player={width:60,height:75,x:canvas.width/2-30,y:canvas.height-150,vx:0,vy:0};
 }
 
 // Генерация платформ с гарантией достижимости
 function createPlatforms(){
-platforms = [];
+platforms=[];
 let y = canvas.height - 50;
 
 // первая платформа под игроком
 platforms.push({x:canvas.width/2-45,y:y,width:90,height:18,type:"normal",vx:0,broken:false,hasSpring:false});
-y -= 80;
+y -= 70; // следующий Y
 
-// последующие платформы
 for(let i=1;i<12;i++){
-let gap = 70 + Math.random()*35; // безопасный gap ≤ MAX_JUMP
+let gap = 60 + Math.random()*50; // gap ≤ MAX_GAP
+if(gap > MAX_GAP) gap = MAX_GAP;
 let typeRand = Math.random();
 let type = "normal";
 if(i>1){
 if(typeRand<0.1) type="break";
 else if(typeRand<0.2) type="move";
 }
-platforms.push({x:Math.random()*(canvas.width-90), y:y-gap, width:90, height:18, type:type, vx:type==="move"?2:0, broken:false, hasSpring:Math.random()<0.1});
+platforms.push({
+x:Math.random()*(canvas.width-90),
+y:y-gap,
+width:90,
+height:18,
+type:type,
+vx:type==="move"?2:0,
+broken:false,
+hasSpring:Math.random()<0.1
+});
 y -= gap;
 }
 }
@@ -110,10 +123,10 @@ player.vy+=GRAVITY;
 if(player.vy>MAX_FALL_SPEED) player.vy=MAX_FALL_SPEED;
 player.y+=player.vy;
 
-// смена картинки
+// картинка
 currentImg = player.vy<0?imgJump:imgFall;
 
-// столкновение
+// столкновения
 if(player.vy>0){
 for(let p of platforms){
 if(p.broken) continue;
@@ -138,8 +151,9 @@ for(let p of platforms){
 if(p.type==="move"){p.x+=p.vx;if(p.x<0||p.x+p.width>canvas.width)p.vx*=-1;}
 if(p.y>canvas.height){
 let highest = platforms.reduce((a,b)=>a.y<b.y?a:b);
-let gap = 70+Math.random()*35; // безопасный gap
-p.y = highest.y - gap;
+let gap = 60 + Math.random()*50;
+if(gap>MAX_GAP) gap = MAX_GAP;
+p.y = highest.y-gap;
 p.x = Math.random()*(canvas.width-p.width);
 let r=Math.random();
 if(r<0.1)p.type="break";
