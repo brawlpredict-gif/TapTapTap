@@ -3,172 +3,308 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>IljaClicker</title>
+<title>BriAU Clicker</title>
+
 <style>
+
 html, body{
-    margin:0; padding:0;
-    background:#111; color:white;
-    font-family:Arial; overflow:hidden;
+    margin:0;
+    padding:0;
+    background:#111; /* дефолтный фон */
+    color:white;
+    font-family:Arial;
+    overflow:hidden;
     touch-action: manipulation;
 }
+
 .container{
-    display:flex; height:100vh; width:100vw;
+    display:flex;
+    height:100vh;
+    width:100vw;
+    background:#111; /* важно */
 }
+
 .left{
     flex:1;
-    display:flex; flex-direction:column;
-    justify-content:center; align-items:center;
+    display:flex;
+    flex-direction:column;
+    justify-content:center;
+    align-items:center;
 }
-#score{ font-size:28px; margin-bottom:10px;}
-.imageContainer{ position:relative;}
+
+#score{
+    font-size:28px;
+    margin-bottom:10px;
+}
+
+.imageContainer{
+    position:relative;
+}
+
 #image{
-    width:60vw; max-width:320px; height:auto;
+    width:60vw;
+    max-width:320px;
     border-radius:20px;
-    user-select:none; -webkit-user-drag:none; -webkit-tap-highlight-color:transparent;
+    user-select:none;
+    -webkit-user-drag:none;
+    -webkit-tap-highlight-color: transparent;
     touch-action: manipulation;
     transition: transform 0.1s;
 }
-#image:active{ transform: scale(1.08); }
+
+#image:active{
+    transform:scale(1.08);
+}
+
 .ripple{
-    position:absolute; border-radius:50%; border:3px solid white;
-    width:20px; height:20px; animation:rippleAnim 0.5s linear;
+    position:absolute;
+    border-radius:50%;
+    border:3px solid white;
+    width:20px;
+    height:20px;
+    animation:rippleAnim 0.5s linear;
 }
-@keyframes rippleAnim{ from{transform:scale(1);opacity:1;} to{transform:scale(6);opacity:0;} }
-.plus{ position:absolute; color:#00ff99; font-weight:bold; animation:plusAnim 0.6s linear; }
-@keyframes plusAnim{ from{transform:translateY(0);opacity:1;} to{transform:translateY(-40px);opacity:0;} }
-.lens{ position:absolute; width:180px; height:180px; border-radius:50%; overflow:hidden; animation:lensAnim 0.3s forwards;}
-.lens img{ position:absolute; width:600px; transform:scale(1.4);}
-@keyframes lensAnim{ to{ transform:scale(1.2); opacity:0; } }
+
+@keyframes rippleAnim{
+    from{transform:scale(1);opacity:1;}
+    to{transform:scale(6);opacity:0;}
+}
+
+.plus{
+    position:absolute;
+    color:#00ff99;
+    font-weight:bold;
+    animation:plusAnim 0.6s linear;
+}
+
+@keyframes plusAnim{
+    from{transform:translateY(0);opacity:1;}
+    to{transform:translateY(-40px);opacity:0;}
+}
+
 .shop{
-    width:40vw; max-width:200px;
-    background:#222; padding:10px; display:flex; flex-direction:column;
+    width:40vw;
+    max-width:200px;
+    background:#222; /* дефолт */
+    padding:10px;
+    display:flex;
+    flex-direction:column;
+    transition: background 0.3s;
 }
-button{ margin:5px 0; padding:10px; font-size:16px; border:none; border-radius:10px; background:#444; color:white;}
-button:disabled{ background:#222; color:#777;}
+
+button{
+    margin:5px 0;
+    padding:10px;
+    font-size:16px;
+    border:none;
+    border-radius:10px;
+    background:#444; /* дефолт */
+    color:white;
+    transition: background 0.3s;
+}
+
+button:disabled{
+    background:#222;
+    color:#777;
+}
+
 .snowCat{
-    position:absolute; width:40px; height:40px;
-    pointer-events:none; z-index:999;
+    position:absolute;
+    width:40px;
+    pointer-events:none;
     animation:snowFall linear forwards;
 }
+
 @keyframes snowFall{
-    0%{transform:translateY(0) translateX(0);}
-    100%{transform:translateY(100vh) translateX(50px);}
+    from{transform:translateY(0);}
+    to{transform:translateY(100vh);}
 }
+
 </style>
 </head>
 <body>
 
-<div class="container">
+<div class="container" id="container">
+
 <div class="left">
+
 <div id="score">Очки: 0</div>
+
 <div class="imageContainer">
 <img src="brother.png" id="image">
 </div>
+
 </div>
-<div class="shop">
+
+<div class="shop" id="shop">
+
 <div>Апгрейды</div>
+
 <button id="double">Двойной клик (100)</button>
 <button id="triple">Тройной клик (300)</button>
-<button id="special">Cat Event (500)</button>
+<button id="catEvent">Cat Event (500)</button>
+
 </div>
+
 </div>
 
 <audio id="clickSound" src="click.mp3"></audio>
-<audio id="specialSound" src="special.mp3"></audio>
+<audio id="eventSound" src="special.mp3"></audio>
 
 <script>
+
 let score=0;
 let clickValue=1;
-let bought2=false;
-let bought3=false;
-let boughtSpecial=false;
+
+let boughtDouble=false;
+let boughtTriple=false;
+let boughtEvent=false;
 
 let scoreText=document.getElementById("score");
 let image=document.getElementById("image");
-let clickSound=document.getElementById("clickSound");
-let specialSound=document.getElementById("specialSound");
 
 let doubleBtn=document.getElementById("double");
 let tripleBtn=document.getElementById("triple");
-let specialBtn=document.getElementById("special");
+let eventBtn=document.getElementById("catEvent");
+
+let shop=document.getElementById("shop");
+let container=document.getElementById("container");
+
+let clickSound=document.getElementById("clickSound");
+let eventSound=document.getElementById("eventSound");
 
 let catInterval=null;
+let discoInterval=null;
 
 function update(){
-    scoreText.innerText="Очки: "+score;
-    doubleBtn.disabled=bought2 || score<100;
-    tripleBtn.disabled=bought3 || score<300;
-    specialBtn.disabled=boughtSpecial || score<10;
+
+scoreText.innerText="Очки: "+score;
+
+doubleBtn.disabled=boughtDouble || score<100;
+tripleBtn.disabled=boughtTriple || score<300;
+eventBtn.disabled=boughtEvent || score<500;
+
 }
 
-// создаём одного котика
-function createSnowCat(){
-    let cat=document.createElement("img");
-    cat.src="cat.png";
-    cat.className="snowCat";
-    cat.style.left=Math.random()*window.innerWidth+"px";
-    cat.style.top="-50px";
-    cat.style.animationDuration=(3+Math.random()*2)+"s";
-    document.body.appendChild(cat);
-    setTimeout(()=>cat.remove(),5000);
+function createCat(){
+
+let cat=document.createElement("img");
+
+cat.src="cat.png";
+cat.className="snowCat";
+
+cat.style.left=Math.random()*window.innerWidth+"px";
+cat.style.top="-40px";
+cat.style.animationDuration=(3+Math.random()*2)+"s";
+
+document.body.appendChild(cat);
+
+setTimeout(()=>cat.remove(),5000);
+
 }
 
-// клик по картинке
-image.addEventListener("click", function(e){
-    score+=clickValue;
-    scoreText.innerText="Очки: "+score;
-    clickSound.currentTime=0; clickSound.play();
+image.onclick=function(e){
 
-    let rect=image.getBoundingClientRect();
-    let x=e.clientX-rect.left;
-    let y=e.clientY-rect.top;
+score+=clickValue;
 
-    let r=document.createElement("div");
-    r.className="ripple"; r.style.left=x+"px"; r.style.top=y+"px";
-    image.parentElement.appendChild(r); setTimeout(()=>r.remove(),500);
+clickSound.currentTime=0;
+clickSound.play();
 
-    let p=document.createElement("div"); p.className="plus"; p.innerText="+"+clickValue;
-    p.style.left=x+"px"; p.style.top=y+"px"; image.parentElement.appendChild(p); setTimeout(()=>p.remove(),600);
+update();
 
-    let lens=document.createElement("div"); lens.className="lens";
-    lens.style.left=(x-90)+"px"; lens.style.top=(y-90)+"px";
-    let img=document.createElement("img"); img.src=image.src;
-    img.style.left=-(x-90)*1.4+"px"; img.style.top=-(y-90)*1.4+"px";
-    lens.appendChild(img); image.parentElement.appendChild(lens); setTimeout(()=>lens.remove(),300);
+}
 
-    update();
-});
-
-// двойной
 doubleBtn.onclick=function(){
-    if(score>=100 && !bought2){ score-=100; clickValue=2; bought2=true; doubleBtn.innerText="Куплено"; update(); }
+
+if(score>=100 && !boughtDouble){
+
+score-=100;
+clickValue=2;
+
+boughtDouble=true;
+
+doubleBtn.innerText="Куплено";
+
+update();
+
 }
-// тройной
+
+}
+
 tripleBtn.onclick=function(){
-    if(score>=300 && !bought3){ score-=300; clickValue=3; bought3=true; tripleBtn.innerText="Куплено"; update(); }
+
+if(score>=300 && !boughtTriple){
+
+score-=300;
+clickValue=3;
+
+boughtTriple=true;
+
+tripleBtn.innerText="Куплено";
+
+update();
+
 }
 
-// Cat Event
-specialBtn.onclick=function(){
-    if(score>=10 && !boughtSpecial){
-        score-=10; boughtSpecial=true; specialBtn.innerText="Куплено"; clickValue*=2; update();
+}
 
-        specialSound.currentTime=0; specialSound.play();
+eventBtn.onclick=function(){
 
-        // запускаем Cat Event на 218 секунд (3:38)
-        let duration = 218000; // миллисекунды
+if(score>=500 && !boughtEvent){
 
-        // каждые 250ms падает кот
-        catInterval=setInterval(createSnowCat,250);
+score-=500;
 
-        setTimeout(()=>{
-            clearInterval(catInterval);
-            catInterval=null;
-        }, duration);
-    }
+boughtEvent=true;
+
+eventBtn.innerText="Куплено";
+
+eventSound.play();
+
+update();
+
+let duration=218000;
+
+/* коты */
+catInterval=setInterval(createCat,250);
+
+/* диско */
+discoInterval=setInterval(()=>{
+
+let color="hsl("+Math.random()*360+",80%,30%)";
+
+document.body.style.background=color;
+container.style.background=color;
+shop.style.background=color;
+
+doubleBtn.style.background=color;
+tripleBtn.style.background=color;
+eventBtn.style.background=color;
+
+},200);
+
+/* конец события */
+setTimeout(()=>{
+
+clearInterval(catInterval);
+clearInterval(discoInterval);
+
+/* возвращаем дефолт */
+document.body.style.background="#111";
+container.style.background="#111";
+shop.style.background="#222";
+
+doubleBtn.style.background="#444";
+tripleBtn.style.background="#444";
+eventBtn.style.background="#444";
+
+},duration);
+
+}
+
 }
 
 update();
+
 </script>
 
 </body>
