@@ -16,8 +16,6 @@ viewport-fit=cover">
 margin:0;
 padding:0;
 box-sizing:border-box;
-
-/* ПОЛНОЕ ОТКЛЮЧЕНИЕ ВЫДЕЛЕНИЯ */
 user-select:none !important;
 -webkit-user-select:none !important;
 -webkit-touch-callout:none !important;
@@ -31,9 +29,7 @@ touch-action:none;
 font-family:Arial;
 }
 
-canvas{
-display:block;
-}
+canvas{display:block;}
 
 #score{
 position:fixed;
@@ -84,12 +80,15 @@ background:rgba(0,0,0,0.6);
 <button class="btn" id="right">→</button>
 </div>
 
+<audio id="music" loop>
+<source src="music.mp3">
+</audio>
+
 <script>
 
-/* ДОП. БЛОКИРОВКИ */
-document.addEventListener("selectstart", e => e.preventDefault(), {passive:false})
+// блокируем выделение
+document.addEventListener("selectstart", e => e.preventDefault())
 document.addEventListener("contextmenu", e => e.preventDefault())
-document.addEventListener("dragstart", e => e.preventDefault())
 
 const canvas = document.getElementById("game")
 const ctx = canvas.getContext("2d")
@@ -101,6 +100,10 @@ canvas.height = window.innerHeight
 resize()
 window.addEventListener("resize", resize)
 
+document.body.addEventListener("touchstart",()=>{
+document.getElementById("music").play()
+},{once:true})
+
 const imgFall = new Image()
 imgFall.src="player_fall.png"
 
@@ -109,21 +112,19 @@ imgJump.src="player_jump.png"
 
 let currentImg = imgFall
 
-// ФИЗИКА (сбалансированная)
-const GRAVITY = 0.23
-const JUMP_FORCE = -7.2
+// ФИЗИКА (сбалансирована под gap)
+const GRAVITY = 0.22
+const JUMP_FORCE = -7.5
 const MOVE_SPEED = 4.5
 const MAX_FALL_SPEED = 10
-const MAX_PLATFORM_GAP = 130   // максимум возможного прыжка
 
 let player
-let platforms = []
-let score = 0
-let difficulty = 1
-let gameRunning = true
+let platforms=[]
+let score=0
+let gameRunning=true
 
 function createPlayer(){
-player = {
+player={
 width:60,
 height:75,
 x:canvas.width/2-30,
@@ -135,19 +136,15 @@ vy:0
 
 function createPlatforms(){
 
-platforms = []
-let count = 12
-let gap = canvas.height / count
+platforms=[]
+let y=canvas.height
 
-let lastY = canvas.height
+for(let i=0;i<12;i++){
 
-for(let i=0;i<count;i++){
-
-let y = lastY - gap
-let x = Math.random()*(canvas.width-90)
+y -= 90 // безопасный gap
 
 platforms.push({
-x:x,
+x:Math.random()*(canvas.width-90),
 y:y,
 width:90,
 height:18,
@@ -156,15 +153,11 @@ vx:0,
 broken:false,
 hasSpring:false
 })
-
-lastY = y
 }
-
 }
 
 function resetGame(){
 score=0
-difficulty=1
 createPlayer()
 createPlatforms()
 gameRunning=true
@@ -182,6 +175,7 @@ function update(){
 
 if(!gameRunning) return
 
+// движение
 if(left) player.vx=-MOVE_SPEED
 else if(right) player.vx=MOVE_SPEED
 else player.vx=0
@@ -191,11 +185,12 @@ player.x+=player.vx
 if(player.x<-player.width) player.x=canvas.width
 if(player.x>canvas.width) player.x=-player.width
 
+// гравитация
 player.vy+=GRAVITY
 if(player.vy>MAX_FALL_SPEED) player.vy=MAX_FALL_SPEED
 player.y+=player.vy
 
-currentImg = player.vy < 0 ? imgJump : imgFall
+currentImg = player.vy<0?imgJump:imgFall
 
 // столкновения
 if(player.vy>0){
@@ -213,11 +208,7 @@ player.y+player.height<p.y+p.height
 if(p.type==="break"){
 p.broken=true
 }else{
-if(p.hasSpring){
-player.vy = JUMP_FORCE*1.5
-}else{
-player.vy = JUMP_FORCE
-}
+player.vy=p.hasSpring?JUMP_FORCE*1.5:JUMP_FORCE
 }
 }
 }
@@ -225,7 +216,6 @@ player.vy = JUMP_FORCE
 
 // движение мира
 if(player.y<canvas.height*0.4){
-
 let diff=canvas.height*0.4-player.y
 player.y=canvas.height*0.4
 
@@ -234,41 +224,43 @@ p.y+=diff
 }
 
 score+=Math.floor(diff)
-difficulty=1+score/5000
 }
 
-// респавн платформ (БЕЗ НЕВОЗМОЖНЫХ ПРЫЖКОВ)
+// респавн
 for(let i=0;i<platforms.length;i++){
 
 let p=platforms[i]
 
+// движение жёлтых
+if(p.type==="move"){
+p.x+=p.vx
+if(p.x<0||p.x+p.width>canvas.width){
+p.vx*=-1
+}
+}
+
 if(p.y>canvas.height){
 
-// находим самую верхнюю платформу
-let highest = platforms.reduce((a,b)=>a.y<b.y?a:b)
+// ищем самую верхнюю
+let highest=platforms.reduce((a,b)=>a.y<b.y?a:b)
 
-p.y = highest.y - (90 + Math.random()*40) // гарантированный достижимый gap
-p.x = Math.random()*(canvas.width-p.width)
-
-// баланс сложности
-let breakChance = score>2000 ? Math.min(0.25,score/8000) : 0
-let moveChance = score>1500 ? Math.min(0.2,score/8000) : 0
-let springChance = Math.min(0.15,score/9000)
+p.y=highest.y-(80+Math.random()*25) // 80–105px
+p.x=Math.random()*(canvas.width-p.width)
 
 let r=Math.random()
 
-if(r<breakChance){
+if(score>2000 && r<0.15){
 p.type="break"
-p.hasSpring=false   // 🔴 нельзя пружину на красной
+p.hasSpring=false
 }
-else if(r<breakChance+moveChance){
+else if(score>1500 && r<0.3){
 p.type="move"
-p.vx=(Math.random()<0.5?-1:1)*(1+difficulty*0.2)
+p.vx=(Math.random()<0.5?-1:1)*2
 p.hasSpring=false
 }
 else{
 p.type="normal"
-p.hasSpring=(Math.random()<springChance)
+p.hasSpring=(Math.random()<0.12)
 }
 
 p.broken=false
@@ -277,7 +269,7 @@ p.broken=false
 
 if(player.y>canvas.height){
 gameRunning=false
-setTimeout(resetGame,500)
+setTimeout(resetGame,600)
 }
 
 }
