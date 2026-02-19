@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>BriAU Clicker</title>
+
+<style>
+
+body {
+    text-align: center;
+    font-family: Arial;
+    background-color: #111;
+    color: white;
+    overflow: hidden;
+}
+
+#score {
+    font-size: 48px;
+    margin: 20px;
+}
+
+#imageContainer {
+    position: relative;
+    display: inline-block;
+    overflow: hidden;
+}
+
+/* фото */
+#image {
+    width: 600px;
+    cursor: pointer;
+    user-select: none;
+    display: block;
+}
+
+/* слой линзы */
+.lens {
+    position: absolute;
+    width: 180px;
+    height: 180px;
+    border-radius: 50%;
+    overflow: hidden;
+    pointer-events: none;
+    animation: lensAnim 0.35s ease-out forwards;
+}
+
+/* увеличенная часть */
+.lens img {
+    position: absolute;
+    width: 600px;
+    height: auto;
+    transform: scale(1.4);
+}
+
+@keyframes lensAnim {
+    0% {
+        opacity: 0.9;
+        transform: scale(0.5);
+    }
+    100% {
+        opacity: 0;
+        transform: scale(1.2);
+    }
+}
+
+/* ripple */
+.ripple {
+    position: absolute;
+    border-radius: 50%;
+    border: 3px solid rgba(0,255,255,0.7);
+    width: 100px;
+    height: 100px;
+    transform: scale(0);
+    animation: rippleAnim 0.5s linear;
+}
+
+@keyframes rippleAnim {
+    to {
+        transform: scale(4);
+        opacity: 0;
+    }
+}
+
+/* +1 */
+.plusOne {
+    position: absolute;
+    color: #00ff88;
+    font-size: 32px;
+    font-weight: bold;
+    pointer-events: none;
+    animation: floatUp 0.8s ease-out forwards;
+}
+
+@keyframes floatUp {
+    from {
+        opacity: 1;
+        transform: translateY(0);
+    }
+    to {
+        opacity: 0;
+        transform: translateY(-80px);
+    }
+}
+
+</style>
+</head>
+
+<body>
+
+<h1>ТАП ТАП ТАП ПО ИЛЮШЕ</h1>
+<div id="score">0</div>
+
+<div id="imageContainer">
+    <img src="brother.png" id="image">
+</div>
+
+<script>
+
+let score = 0;
+let container = document.getElementById("imageContainer");
+let image = document.getElementById("image");
+
+// быстрый звук без задержки
+function playClickSound()
+{
+    let audio = new Audio("click.mp3");
+    audio.volume = 0.3;
+    audio.play();
+}
+
+image.addEventListener("pointerdown", function(event)
+{
+    score++;
+    document.getElementById("score").innerText = score;
+
+    playClickSound();
+
+    let rect = container.getBoundingClientRect();
+    let x = event.clientX - rect.left;
+    let y = event.clientY - rect.top;
+
+    // ripple
+    let ripple = document.createElement("div");
+    ripple.className = "ripple";
+    ripple.style.left = (x - 50) + "px";
+    ripple.style.top = (y - 50) + "px";
+    container.appendChild(ripple);
+    setTimeout(() => ripple.remove(), 500);
+
+    // +1
+    let plus = document.createElement("div");
+    plus.className = "plusOne";
+    plus.innerText = "+1";
+    plus.style.left = x + "px";
+    plus.style.top = y + "px";
+    container.appendChild(plus);
+    setTimeout(() => plus.remove(), 800);
+
+    // настоящий эффект рыбьего глаза
+    let lens = document.createElement("div");
+    lens.className = "lens";
+    lens.style.left = (x - 90) + "px";
+    lens.style.top = (y - 90) + "px";
+
+    let zoomed = document.createElement("img");
+    zoomed.src = image.src;
+    zoomed.style.left = -(x - 90) * 1.4 + "px";
+    zoomed.style.top = -(y - 90) * 1.4 + "px";
+
+    lens.appendChild(zoomed);
+    container.appendChild(lens);
+
+    setTimeout(() => lens.remove(), 350);
+});
+
+</script>
+
+</body>
+</html>
