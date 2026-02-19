@@ -8,28 +8,31 @@ initial-scale=1.0,
 maximum-scale=1.0,
 user-scalable=no,
 viewport-fit=cover">
+
 <title>Tomato Jump</title>
 
 <style>
-html,body{
+*{
 margin:0;
 padding:0;
+box-sizing:border-box;
+
+/* ПОЛНОЕ ОТКЛЮЧЕНИЕ ВЫДЕЛЕНИЯ */
+user-select:none !important;
+-webkit-user-select:none !important;
+-webkit-touch-callout:none !important;
+-webkit-tap-highlight-color:transparent !important;
+}
+
+html,body{
 overflow:hidden;
 background:#87CEEB;
 touch-action:none;
 font-family:Arial;
-
-/* 🔥 ОТКЛЮЧАЕМ ВЫДЕЛЕНИЕ */
-user-select:none;
--webkit-user-select:none;
--webkit-touch-callout:none;
--webkit-tap-highlight-color:transparent;
 }
 
 canvas{
 display:block;
-user-select:none;
--webkit-user-select:none;
 }
 
 #score{
@@ -40,7 +43,7 @@ font-size:22px;
 color:white;
 font-weight:bold;
 z-index:10;
-pointer-events:none; /* нельзя выделить */
+pointer-events:none;
 }
 
 #controls{
@@ -51,7 +54,6 @@ width:100%;
 display:flex;
 justify-content:space-between;
 padding:0 30px;
-box-sizing:border-box;
 z-index:10;
 }
 
@@ -63,10 +65,7 @@ border:none;
 background:rgba(0,0,0,0.35);
 color:white;
 font-size:36px;
-
-user-select:none;
--webkit-user-select:none;
--webkit-tap-highlight-color:transparent;
+outline:none;
 }
 
 .btn:active{
@@ -85,15 +84,12 @@ background:rgba(0,0,0,0.6);
 <button class="btn" id="right">→</button>
 </div>
 
-<audio id="music" loop>
-<source src="music.mp3">
-</audio>
-
 <script>
 
-// 🔥 ДОП. БЛОКИРОВКА ВЫДЕЛЕНИЯ
-document.addEventListener("selectstart", e => e.preventDefault())
-document.addEventListener("gesturestart", e => e.preventDefault())
+/* ДОП. БЛОКИРОВКИ */
+document.addEventListener("selectstart", e => e.preventDefault(), {passive:false})
+document.addEventListener("contextmenu", e => e.preventDefault())
+document.addEventListener("dragstart", e => e.preventDefault())
 
 const canvas = document.getElementById("game")
 const ctx = canvas.getContext("2d")
@@ -113,11 +109,12 @@ imgJump.src="player_jump.png"
 
 let currentImg = imgFall
 
-// ===== ФИЗИКА (МЕДЛЕННЕЕ ПРЫЖОК) =====
-const GRAVITY = 0.22        // было 0.28
-const JUMP_FORCE = -7       // было -8.5
+// ФИЗИКА (сбалансированная)
+const GRAVITY = 0.23
+const JUMP_FORCE = -7.2
 const MOVE_SPEED = 4.5
-const MAX_FALL_SPEED = 10   // было 12
+const MAX_FALL_SPEED = 10
+const MAX_PLATFORM_GAP = 130   // максимум возможного прыжка
 
 let player
 let platforms = []
@@ -137,14 +134,21 @@ vy:0
 }
 
 function createPlatforms(){
+
 platforms = []
 let count = 12
-let spacing = canvas.height / count
+let gap = canvas.height / count
+
+let lastY = canvas.height
 
 for(let i=0;i<count;i++){
+
+let y = lastY - gap
+let x = Math.random()*(canvas.width-90)
+
 platforms.push({
-x:Math.random()*(canvas.width-90),
-y:i*spacing,
+x:x,
+y:y,
 width:90,
 height:18,
 type:"normal",
@@ -152,7 +156,10 @@ vx:0,
 broken:false,
 hasSpring:false
 })
+
+lastY = y
 }
+
 }
 
 function resetGame(){
@@ -166,23 +173,10 @@ gameRunning=true
 let left=false
 let right=false
 
-document.getElementById("left").ontouchstart=()=>left=true
-document.getElementById("left").ontouchend=()=>left=false
-document.getElementById("right").ontouchstart=()=>right=true
-document.getElementById("right").ontouchend=()=>right=false
-
-document.addEventListener("keydown",e=>{
-if(e.key=="ArrowLeft") left=true
-if(e.key=="ArrowRight") right=true
-})
-document.addEventListener("keyup",e=>{
-if(e.key=="ArrowLeft") left=false
-if(e.key=="ArrowRight") right=false
-})
-
-document.body.addEventListener("touchstart",()=>{
-document.getElementById("music").play()
-},{once:true})
+document.getElementById("left").ontouchstart=e=>{e.preventDefault();left=true}
+document.getElementById("left").ontouchend=e=>{e.preventDefault();left=false}
+document.getElementById("right").ontouchstart=e=>{e.preventDefault();right=true}
+document.getElementById("right").ontouchend=e=>{e.preventDefault();right=false}
 
 function update(){
 
@@ -203,9 +197,10 @@ player.y+=player.vy
 
 currentImg = player.vy < 0 ? imgJump : imgFall
 
+// столкновения
 if(player.vy>0){
-for(let i=0;i<platforms.length;i++){
-let p=platforms[i]
+for(let p of platforms){
+
 if(p.broken) continue
 
 if(
@@ -214,61 +209,69 @@ player.x<p.x+p.width &&
 player.y+player.height>p.y &&
 player.y+player.height<p.y+p.height
 ){
+
 if(p.type==="break"){
 p.broken=true
 }else{
-player.vy = p.hasSpring ? JUMP_FORCE*1.6 : JUMP_FORCE
+if(p.hasSpring){
+player.vy = JUMP_FORCE*1.5
+}else{
+player.vy = JUMP_FORCE
+}
 }
 }
 }
 }
 
+// движение мира
 if(player.y<canvas.height*0.4){
+
 let diff=canvas.height*0.4-player.y
 player.y=canvas.height*0.4
 
-for(let i=0;i<platforms.length;i++){
-platforms[i].y+=diff
+for(let p of platforms){
+p.y+=diff
 }
 
 score+=Math.floor(diff)
-difficulty=1+score/4000
+difficulty=1+score/5000
 }
 
+// респавн платформ (БЕЗ НЕВОЗМОЖНЫХ ПРЫЖКОВ)
 for(let i=0;i<platforms.length;i++){
-let p=platforms[i]
 
-if(p.type==="move"){
-p.x+=p.vx
-if(p.x<0||p.x+p.width>canvas.width){
-p.vx*=-1
-}
-}
+let p=platforms[i]
 
 if(p.y>canvas.height){
 
-p.y=-20
-p.x=Math.random()*(canvas.width-p.width)
+// находим самую верхнюю платформу
+let highest = platforms.reduce((a,b)=>a.y<b.y?a:b)
 
-let breakChance=Math.min(0.25,score/6000)
-let moveChance=Math.min(0.2,score/6000)
-let springChance=Math.min(0.15,score/8000)
+p.y = highest.y - (90 + Math.random()*40) // гарантированный достижимый gap
+p.x = Math.random()*(canvas.width-p.width)
+
+// баланс сложности
+let breakChance = score>2000 ? Math.min(0.25,score/8000) : 0
+let moveChance = score>1500 ? Math.min(0.2,score/8000) : 0
+let springChance = Math.min(0.15,score/9000)
 
 let r=Math.random()
 
 if(r<breakChance){
 p.type="break"
+p.hasSpring=false   // 🔴 нельзя пружину на красной
 }
 else if(r<breakChance+moveChance){
 p.type="move"
 p.vx=(Math.random()<0.5?-1:1)*(1+difficulty*0.2)
+p.hasSpring=false
 }
 else{
 p.type="normal"
+p.hasSpring=(Math.random()<springChance)
 }
 
 p.broken=false
-p.hasSpring=(Math.random()<springChance)
 }
 }
 
@@ -285,8 +288,8 @@ ctx.clearRect(0,0,canvas.width,canvas.height)
 
 ctx.drawImage(currentImg,player.x,player.y,player.width,player.height)
 
-for(let i=0;i<platforms.length;i++){
-let p=platforms[i]
+for(let p of platforms){
+
 if(p.broken) continue
 
 if(p.type==="break") ctx.fillStyle="#e74c3c"
