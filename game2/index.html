@@ -236,9 +236,27 @@ p.vx*=-1
 }
 }
 
-if(p.y>canvas.height){
-createPlatform(-20)
-p.y=9999
+if(p.y > canvas.height){
+
+    // переспавн этой же платформы
+    p.y = -20
+    p.x = Math.random() * (canvas.width - p.width)
+
+    // перерасчёт типа с учётом сложности
+    let breakChance = Math.min(0.3, score/5000)
+    let moveChance = Math.min(0.25, score/4000)
+    let springChance = Math.min(0.2, score/6000)
+
+    let r = Math.random()
+
+    if(r < breakChance) p.type = "break"
+    else if(r < breakChance + moveChance) p.type = "move"
+    else p.type = "normal"
+
+    p.broken = false
+    p.hasSpring = (Math.random() < springChance)
+
+    p.vx = (Math.random()<0.5?-1:1)*(1+difficulty*0.3)
 }
 })
 
