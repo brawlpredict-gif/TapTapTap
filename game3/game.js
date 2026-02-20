@@ -1,20 +1,18 @@
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
-
 canvas.width = innerWidth;
 canvas.height = innerHeight;
 
-// --------- OBJECTS ----------
-let player = {x:200, y:0, vy:0, onGround:false, run:null, jump:null};
-let granny = {x:-400, y:0, vy:0, onGround:false, run:null, jump:null};
-
+// OBJECTS
+let player, granny;
 let gravity = 0.7;
 let speed = 6;
+let slowTimer = 0;
 let worldX = 0;
-let platforms = [];
-let groundImg;
+let obstacles = [];
+let groundImg, obstacleImg;
 
-// -------- SAFE IMAGE LOADER --------
+// IMAGE LOADER
 function loadImage(src){
   return new Promise(resolve=>{
     const img = new Image();
@@ -29,10 +27,13 @@ function safeDraw(img,x,y,w,h){
   }
 }
 
-// -------- START GAME --------
+// START GAME
 async function startGame(cat){
   document.getElementById("menu").style.display="none";
   canvas.style.display="block";
+
+  player = {x:200, y:0, vy:0, onGround:false, run:null, jump:null};
+  granny = {x:-250, y:0, vy:0, onGround:false, run:null, jump:null};
 
   if(cat==="black"){
     player.run  = await loadImage("cat_black_run.png");
@@ -45,107 +46,118 @@ async function startGame(cat){
   granny.run  = await loadImage("granny_run.png");
   granny.jump = await loadImage("granny_jump.png");
   groundImg   = await loadImage("ground.png");
+  obstacleImg = await loadImage("obstacle.png");
 
-  createPlatforms();
+  obstacles = [];
+  worldX = 0;
   requestAnimationFrame(loop);
 }
 
-// -------- PLATFORMS --------
-function createPlatforms(){
-  platforms=[];
-  for(let i=0;i<500;i++){
-    platforms.push({x:i*300, y:canvas.height-140});
-  }
-}
-
-// -------- LOOP --------
+// LOOP
 function loop(){
   update();
   draw();
   requestAnimationFrame(loop);
 }
 
-// -------- UPDATE --------
+// UPDATE
 function update(){
   worldX += speed;
 
-  // PLAYER
+  // PLAYER PHYSICS
   player.vy += gravity;
   player.y += player.vy;
   player.onGround=false;
 
-  platforms.forEach(p=>{
-    let px=p.x-worldX;
-    if(player.x+60>px && player.x<px+200){
-      if(player.y+80>=p.y){
-        player.y=p.y-80;
-        player.vy=0;
-        player.onGround=true;
-      }
+  let groundY = canvas.height - 140;
+  if(player.y >= groundY){
+    player.y = groundY;
+    player.vy = 0;
+    player.onGround = true;
+  }
+
+  // OBSTACLES SPAWN
+  if(Math.random() < 0.02){
+    obstacles.push({x: worldX + canvas.width, y: groundY, hit:false});
+  }
+
+  // COLLISION
+  obstacles.forEach(o=>{
+    let ox = o.x - worldX;
+    if(!o.hit && player.x+60>ox && player.x<ox+60 && player.y+80>o.y){
+      o.hit=true;
+      slowTimer = 60; // 1 секунда замедления
     }
   });
 
-  // GRANNY
+  // SLOW EFFECT
+  let currentSpeed = speed;
+  if(slowTimer>0){
+    currentSpeed = speed * 0.4;
+    slowTimer--;
+  }
+
+  worldX += currentSpeed - speed; // компенсируем
+
+  // GRANNY SAME SPEED
   granny.vy += gravity;
   granny.y += granny.vy;
-  granny.onGround=false;
+  if(granny.y >= groundY){
+    granny.y = groundY;
+    granny.vy = 0;
+    granny.onGround=true;
+  }
 
-  platforms.forEach(p=>{
-    let px=p.x-worldX;
-    if(granny.x+80>px && granny.x<px+200){
-      if(granny.y+100>=p.y){
-        granny.y=p.y-100;
-        granny.vy=0;
-        granny.onGround=true;
-      }
-    }
-  });
+  // бабка догоняет если ты медленный
+  granny.x += (speed - currentSpeed) * 0.5;
 
-  // бабка медленно приближается
-  granny.x += 0.15;
-
-  // проигрыш
+  // LOSE
   if(granny.x > player.x-120){
-    alert("Бабка догнала!");
-    location.reload();
+    endGame();
   }
 }
 
-// -------- DRAW --------
+// DRAW
 function draw(){
   ctx.clearRect(0,0,canvas.width,canvas.height);
 
-  // ground scrolling
+  // ground
   if(groundImg){
     for(let i=0;i<10;i++){
-      ctx.drawImage(groundImg, i*groundImg.width - (worldX%groundImg.width), canvas.height-120);
+      ctx.drawImage(groundImg, i*groundImg.width - (worldX%groundImg.width), canvas.height-100);
     }
   }
 
-  // debug platforms
-  ctx.fillStyle="#222";
-  platforms.forEach(p=>{
-    ctx.fillRect(p.x-worldX, p.y, 200, 20);
+  // obstacles
+  obstacles.forEach(o=>{
+    let ox=o.x-worldX;
+    safeDraw(obstacleImg, ox, o.y-60, 60, 60);
   });
 
-  // player sprite
+  // player
   let pImg = player.onGround ? player.run : player.jump;
-  safeDraw(pImg, player.x, player.y, 80, 80);
+  safeDraw(pImg, player.x, player.y-80, 80, 80);
 
-  // granny sprite
+  // granny
   let gImg = granny.onGround ? granny.run : granny.jump;
-  safeDraw(gImg, granny.x, granny.y, 100, 100);
+  safeDraw(gImg, granny.x, granny.y-100, 100, 100);
 }
 
-// -------- INPUT --------
+// INPUT
+document.getElementById("jumpBtn").onclick = jump;
+document.getElementById("jumpBtn").ontouchstart = jump;
 document.addEventListener("keydown", e=>{
   if(e.code==="Space") jump();
 });
-document.getElementById("jumpBtn").ontouchstart = jump;
-document.getElementById("jumpBtn").onclick = jump;
 
 function jump(){
   if(player.onGround){
-    player.vy = -14;
+    player.vy = -15;
   }
+}
+
+// END GAME
+function endGame(){
+  alert("Бабка догнала!");
+  location.reload(); // возвращаем в меню выбора
 }
