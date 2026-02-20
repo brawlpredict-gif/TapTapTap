@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Run Game</title>
+<style>
+html,body{
+    margin:0;
+    padding:0;
+    overflow:hidden;
+    background:#111;
+    font-family:sans-serif;
+    -webkit-user-select:none;
+    -ms-user-select:none;
+    user-select:none;
+    touch-action:none;
+}
+canvas{
+    display:block;
+}
+#menu{
+    position:absolute;
+    inset:0;
+    display:flex;
+    flex-direction:column;
+    justify-content:center;
+    align-items:center;
+    background:#111;
+    color:white;
+}
+.char-select{
+    display:flex;
+    gap:40px;
+    margin-top:20px;
+}
+.char img{
+    width:120px;
+}
+button{
+    padding:10px 20px;
+    font-size:18px;
+    margin-top:10px;
+}
+#rotateHint{
+    position:absolute;
+    bottom:10px;
+    width:100%;
+    text-align:center;
+    color:#aaa;
+    font-size:14px;
+}
+#score{
+    position:absolute;
+    top:10px;
+    left:10px;
+    color:white;
+    font-size:18px;
+}
+</style>
+</head>
+<body>
+
+<div id="menu">
+    <h2>Выберите персонажа</h2>
+    <div class="char-select">
+        <div class="char">
+            <img src="cat_black_run.png">
+            <button onclick="startGame('black')">Cat Black</button>
+        </div>
+        <div class="char">
+            <img src="cat_white_run.png">
+            <button onclick="startGame('white')">Cat White</button>
+        </div>
+    </div>
+    <div id="rotateHint">Поверните телефон горизонтально для удобной игры</div>
+</div>
+
+<div id="score"></div>
+<canvas id="game"></canvas>
+
+<audio id="music" src="music.mp3" loop></audio>
+<audio id="loseSound" src="lose.mp3"></audio>
+
+<script>
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
+const menu = document.getElementById("menu");
+const scoreEl = document.getElementById("score");
+const music = document.getElementById("music");
+const loseSound = document.getElementById("loseSound");
+
+let W,H;
+function resize(){
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+    W = canvas.width;
+    H = canvas.height;
+}
+window.addEventListener("resize",resize);
+resize();
+
+const imgs = {
+    black_run:new Image(),
+    black_jump:new Image(),
+    white_run:new Image(),
+    white_jump:new Image(),
+    granny_run:new Image(),
+    granny_jump:new Image(),
+    obstacle:new Image(),
+    background:new Image()
+};
+
+imgs.black_run.src="cat_black_run.png";
+imgs.black_jump.src="cat_black_jump.png";
+imgs.white_run.src="cat_white_run.png";
+imgs.white_jump.src="cat_white_jump.png";
+imgs.granny_run.src="granny_run.png";
+imgs.granny_jump.src="granny_jump.png";
+imgs.obstacle.src="obstacle.png";
+imgs.background.src="background.png";
+
+let player, granny, obstacles;
+let gravity=0.8, speed=6, score, gameOver=false;
+let bgX = 0;
+let shakePower = 0;
+let particles = [];
+
+function startGame(type){
+    menu.style.display="none";
+    music.currentTime=0;
+    music.play();
+
+    player={
+        x:W/2-40,
+        y:H-150,
+        w:80,
+        h:80,
+        vy:0,
+        jumping:false,
+        type:type
+    };
+
+    granny={
+        x:player.x-400,
+        y:H-150,
+        w:80,
+        h:80,
+        vy:0,
+        jumping:false
+    };
+
+    obstacles=[];
+    particles=[];
+    score=0;
+    gameOver=false;
+    speed=6;
+    bgX=0;
+
+    loop();
+}
+
+function spawnObstacle(){
+    if(Math.random()<0.01){
+        obstacles.push({
+            x:W+50,
+            y:H-150,
+            w:80,
+            h:100,
+            hitboxOffsetX:20,
+            hitboxOffsetY:30,
+            hitboxW:40,
+            hitboxH:50
+        });
+    }
+}
+
+function jump(character){
+    if(!character.jumping){
+        character.vy=-22;
+        character.jumping=true;
+    }
+}
+
+canvas.addEventListener("touchstart",()=>jump(player));
+canvas.addEventListener("mousedown",()=>jump(player));
+
+function spawnDust(x,y){
+    particles.push({
+        x:x,
+        y:y,
+        vx:-Math.random()*2-1,
+        vy:-Math.random()*2,
+        size:Math.random()*6+4,
+        life:30
+    });
+}
+
+function collide(a,b){
+    let bx=b.x+(b.hitboxOffsetX||0);
+    let by=b.y+(b.hitboxOffsetY||0);
+    let bw=b.hitboxW||b.w;
+    let bh=b.hitboxH||b.h;
+
+    return (
+        a.x < bx + bw &&
+        a.x + a.w > bx &&
+        a.y < by + bh &&
+        a.y + a.h > by
+    );
+}
+
+function update(){
+    spawnObstacle();
+
+    score+=0.05;
+    scoreEl.innerText="Очки: "+Math.floor(score);
+
+    bgX -= speed*0.5;
+    if(bgX<=-W) bgX=0;
+
+    if(!player.jumping && Math.random()<0.4){
+        spawnDust(player.x+10,player.y+player.h-10);
+    }
+
+    player.vy+=gravity;
+    player.y+=player.vy;
+    if(player.y>=H-150){
+        player.y=H-150;
+        player.vy=0;
+        player.jumping=false;
+    }
+
+    granny.vy+=gravity;
+    granny.y+=granny.vy;
+    if(granny.y>=H-150){
+        granny.y=H-150;
+        granny.vy=0;
+        granny.jumping=false;
+    }
+
+    for(let o of obstacles){
+        o.x-=speed;
+
+        if(collide(player,o)){
+            speed=5.5;
+            granny.x+=0.5;
+            shakePower=10;
+        }
+
+        if(collide(granny,o) && !granny.jumping){
+            jump(granny);
+        }
+    }
+
+
+    obstacles=obstacles.filter(o=>o.x+o.w>0);
+
+    for(let p of particles){
+        p.x+=p.vx;
+        p.y+=p.vy;
+        p.life--;
+        p.size*=0.96;
+    }
+    particles=particles.filter(p=>p.life>0);
+
+    if(granny.x+granny.w>=player.x){
+        endGame();
+    }
+}
+
+function draw(){
+    ctx.clearRect(0,0,W,H);
+
+    let shakeX=0,shakeY=0;
+    if(shakePower>0){
+        shakeX=(Math.random()-0.5)*shakePower;
+        shakeY=(Math.random()-0.5)*shakePower;
+        shakePower*=0.9;
+    }
+
+    ctx.save();
+    ctx.translate(shakeX,shakeY);
+
+    ctx.drawImage(imgs.background,bgX,0,W,H);
+    ctx.drawImage(imgs.background,bgX+W,0,W,H);
+
+    ctx.fillStyle="#333";
+    ctx.fillRect(0,H-70,W,70);
+
+    for(let o of obstacles){
+        ctx.drawImage(imgs.obstacle,o.x,o.y,o.w,o.h);
+    }
+
+    for(let p of particles){
+        ctx.fillStyle="rgba(200,200,200,"+(p.life/30)+")";
+        ctx.beginPath();
+        ctx.arc(p.x,p.y,p.size,0,Math.PI*2);
+        ctx.fill();
+    }
+
+    let pImg=player.jumping?
+        imgs[player.type+"_jump"]:
+        imgs[player.type+"_run"];
+    ctx.drawImage(pImg,player.x,player.y,player.w,player.h);
+
+    let gImg=granny.jumping?imgs.granny_jump:imgs.granny_run;
+    ctx.drawImage(gImg,granny.x,granny.y,granny.w,granny.h);
+
+    ctx.restore();
+}
+
+function loop(){
+    if(gameOver)return;
+    update();
+    draw();
+    requestAnimationFrame(loop);
+}
+
+function endGame(){
+    gameOver=true;
+    music.pause();
+    loseSound.play();
+    setTimeout(()=>{
+        menu.style.display="flex";
+        scoreEl.innerText="";
+    },1500);
+}
+
+document.addEventListener("contextmenu",e=>e.preventDefault());
+document.addEventListener("selectstart",e=>e.preventDefault());
+</script>
+</body>
+</html>
