@@ -1,85 +1,53 @@
-console.log("GAME MOBILE RUNNER");
+let player = { x: 150, y: 0, vy: 0, onGround: true, speed: 6 };
+let granny = { x: -800, y: 0, speed: 4 };
 
-const canvas = document.getElementById("game");
-const ctx = canvas.getContext("2d");
-
-function resize() {
-  canvas.width = innerWidth;
-  canvas.height = innerHeight;
-}
-resize();
-window.onresize = resize;
-
+let worldSpeed = 6;
 let groundY;
-let gravity = 1.2;
-let worldSpeed = 6; // скорость бега
-
-let player = { x: 120, y: 0, vy: 0, onGround: true };
-let granny = { x: -400, y: 0, speed: 4 };
-
+let gravity = 1.1;
 let groundX = 0;
 
-let playerRun = new Image();
-let playerJump = new Image();
-const grannyRun = new Image();
-grannyRun.src = "granny_run.png";
-const grannyJump = new Image();
-grannyJump.src = "granny_jump.png";
-const groundImg = new Image();
-groundImg.src = "ground.png";
+// ===== ДЖОЙСТИК =====
+const joystick = document.getElementById("joystick");
+const stick = document.getElementById("stick");
+let joyActive = false;
+let joyStartY = 0;
 
-function startGame(cat) {
-  document.getElementById("menu").style.display = "none";
-  canvas.style.display = "block";
+joystick.addEventListener("touchstart", e => {
+  joyActive = true;
+  joyStartY = e.touches[0].clientY;
+});
 
-  if (cat === "black") {
-    playerRun.src = "cat_black_run.png";
-    playerJump.src = "cat_black_jump.png";
-  } else {
-    playerRun.src = "cat_white_run.png";
-    playerJump.src = "cat_white_jump.png";
-  }
+joystick.addEventListener("touchmove", e => {
+  if (!joyActive) return;
+  let dy = e.touches[0].clientY - joyStartY;
+  dy = Math.max(-50, Math.min(50, dy));
+  stick.style.top = 40 + dy + "px";
 
-  groundY = canvas.height - 140;
-  player.y = groundY;
-  granny.y = groundY;
+  // вверх = прыжок
+  if (dy < -30) jump();
+});
 
-  loop();
-}
+joystick.addEventListener("touchend", () => {
+  joyActive = false;
+  stick.style.top = "40px";
+});
 
 function jump() {
   if (player.onGround) {
-    player.vy = -22;
+    player.vy = -20;
     player.onGround = false;
   }
 }
 
-// ПК
-document.addEventListener("keydown", e => {
-  if (e.code === "Space") jump();
-});
-
-// МОБИЛЬНЫЙ ТАП
-document.getElementById("jumpBtn").ontouchstart = jump;
-document.getElementById("jumpBtn").onclick = jump;
-
-function drawSafe(img, x, y, w, h, color="red") {
-  if (img.complete && img.naturalWidth > 0) {
-    ctx.drawImage(img, x, y, w, h);
-  } else {
-    ctx.fillStyle = color;
-    ctx.fillRect(x, y, w, h);
-  }
-}
-
+// ===== ГЛАВНЫЙ ЦИКЛ =====
 function loop() {
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.clearRect(0,0,canvas.width,canvas.height);
 
-  // ===== ДВИЖЕНИЕ МИРА =====
+  // мир едет
   groundX -= worldSpeed;
   if (groundX <= -128) groundX = 0;
 
-  // ===== ФИЗИКА =====
+  // физика
   player.vy += gravity;
   player.y += player.vy;
 
@@ -89,24 +57,28 @@ function loop() {
     player.onGround = true;
   }
 
-  // бабка медленно догоняет
-  granny.x += granny.speed;
+  // 👵 логика бабки (НЕ догоняет сразу)
+  if (worldSpeed < granny.speed) {
+    granny.x += granny.speed - worldSpeed;
+  } else {
+    granny.x -= 0.5; // отстаёт
+  }
 
-  // если догнала
-  if (granny.x + 100 > player.x) {
+  // если реально догнала
+  if (granny.x > player.x - 80) {
     alert("Бабка догнала!");
     location.reload();
   }
 
-  // ===== ЗЕМЛЯ СКРОЛЛ =====
-  for (let i = -128; i < canvas.width; i += 128) {
-    drawSafe(groundImg, i + groundX, groundY + 90, 128, 50, "green");
+  // земля
+  for (let i=-128; i<canvas.width; i+=128) {
+    drawSafe(groundImg, i + groundX, groundY + 100, 128, 50, "green");
   }
 
-  // ===== КОТ =====
+  // кот
   drawSafe(player.onGround ? playerRun : playerJump, player.x, player.y - 120, 120, 120, "blue");
 
-  // ===== БАБКА =====
+  // бабка
   drawSafe(grannyRun, granny.x, granny.y - 120, 120, 120, "purple");
 
   requestAnimationFrame(loop);
