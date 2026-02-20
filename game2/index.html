@@ -109,7 +109,7 @@ function saveScore(name, score){
 function showGameOver(){
   finalScore.innerText=score;
   overlay.style.display="flex";
-  playerNameInput.focus();
+  // **не фокусируем поле автоматически** – клавиатура не выдвигается
   let scores = JSON.parse(localStorage.getItem("tomatoJumpScores")||"[]");
   if(scores.length>0){
     highscoresDiv.innerHTML="<b>Топ-5 рекордов:</b><br>"+scores.map(s=>`${s.name}: ${s.score}`).join("<br>");
@@ -150,7 +150,6 @@ function update(){
           p.canJump=false;
         }else if(p.type!=="break"){
           player.vy = p.hasSpring?JUMP_FORCE*1.5:JUMP_FORCE;
-          // **зелёные и жёлтые можно использовать сколько угодно**
         }
       }
     }
