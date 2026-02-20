@@ -47,6 +47,7 @@ window.addEventListener("resize", resize);
 
 const imgFall = new Image(); imgFall.src="player_fall.png";
 const imgJump = new Image(); imgJump.src="player_jump.png";
+const springImg = new Image(); springImg.src="spring.png"; // картинка пружины
 let currentImg = imgFall;
 const background = new Image(); background.src="background.png";
 
@@ -153,11 +154,11 @@ function update(){
       if(player.x+player.width>p.x && player.x<p.x+p.width &&
          player.y+player.height>p.y && player.y+player.height<p.y+p.height){
         if(p.type==="break" && p.canJump){
-          player.vy = p.hasSpring?JUMP_FORCE*2.5:JUMP_FORCE; // пружина теперь 2.5×
+          player.vy = p.hasSpring?JUMP_FORCE*2.5:JUMP_FORCE;
           p.broken=true;
           p.canJump=false;
         }else if(p.type!=="break"){
-          player.vy = p.hasSpring?JUMP_FORCE*2.5:JUMP_FORCE; // пружина теперь 2.5×
+          player.vy = p.hasSpring?JUMP_FORCE*2.5:JUMP_FORCE;
         }
       }
     }
@@ -203,7 +204,10 @@ function draw(){
     else if(p.type==="move") ctx.fillStyle="#f1c40f";
     else ctx.fillStyle="#2ecc71";
     ctx.fillRect(p.x,p.y,p.width,p.height);
-    if(p.hasSpring){ctx.fillStyle="white";ctx.fillRect(p.x+p.width/2-5,p.y-10,10,10);}
+    if(p.hasSpring){
+      // пружина картинка 20x20px
+      ctx.drawImage(springImg,p.x+p.width/2-10,p.y-20,20,20);
+    }
   }
   document.getElementById("score").innerText = score;
 }
