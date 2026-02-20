@@ -2,19 +2,21 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Cat Runner</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Побег от бабки</title>
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
 <div id="menu">
   <h2>Выбери кота</h2>
-  <img src="img/cat_black_run.png" id="blackCat">
-  <img src="img/cat_white_run.png" id="whiteCat">
+  <img src="cat_black_run.png" onclick="startGame('black')">
+  <img src="cat_white_run.png" onclick="startGame('white')">
 </div>
 
 <canvas id="game"></canvas>
-<button id="jumpBtn">JUMP</button>
+
+<button id="jumpBtn">ПРЫЖОК</button>
 
 <script src="game.js"></script>
 </body>
