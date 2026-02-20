@@ -93,7 +93,7 @@ document.addEventListener("keyup",e=>{if(e.key=="ArrowLeft")left=false;if(e.key=
 
 // музыка
 const music = document.getElementById("music");
-music.play().catch(()=>{ /* если автоплей заблокирован, пользователь включит */ });
+music.play().catch(()=>{});
 
 const overlay = document.getElementById("gameoverOverlay");
 const finalScore = document.getElementById("finalScore");
@@ -153,11 +153,11 @@ function update(){
       if(player.x+player.width>p.x && player.x<p.x+p.width &&
          player.y+player.height>p.y && player.y+player.height<p.y+p.height){
         if(p.type==="break" && p.canJump){
-          player.vy = p.hasSpring?JUMP_FORCE*1.5:JUMP_FORCE;
+          player.vy = p.hasSpring?JUMP_FORCE*2.5:JUMP_FORCE; // пружина теперь 2.5×
           p.broken=true;
           p.canJump=false;
         }else if(p.type!=="break"){
-          player.vy = p.hasSpring?JUMP_FORCE*1.5:JUMP_FORCE;
+          player.vy = p.hasSpring?JUMP_FORCE*2.5:JUMP_FORCE; // пружина теперь 2.5×
         }
       }
     }
