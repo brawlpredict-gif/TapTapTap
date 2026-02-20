@@ -57,6 +57,9 @@ const MAX_FALL_SPEED = 12;
 const MAX_JUMP_HEIGHT = (JUMP_FORCE*JUMP_FORCE)/(2*GRAVITY*0.9);
 const MAX_HOR_JUMP = 120;
 
+// начальная ширина платформ
+let PLATFORM_WIDTH = 90;
+
 let player, platforms=[], score=0, gameRunning=true;
 
 function createPlayer(){ player={width:60,height:75,x:canvas.width/2-30,y:canvas.height-150,vx:0,vy:0}; }
@@ -64,17 +67,17 @@ function createPlayer(){ player={width:60,height:75,x:canvas.width/2-30,y:canvas
 function createPlatforms(){
   platforms=[];
   let y = canvas.height - 50;
-  let prevX = canvas.width/2-45;
-  platforms.push({x:prevX,y:y,width:90,height:18,type:"normal",vx:0,broken:false,hasSpring:false});
+  let prevX = canvas.width/2-PLATFORM_WIDTH/2;
+  platforms.push({x:prevX,y:y,width:PLATFORM_WIDTH,height:18,type:"normal",vx:0,broken:false,hasSpring:false});
   y-=70;
   for(let i=1;i<12;i++){
     let gap = 60 + Math.random()*50; if(gap>MAX_JUMP_HEIGHT) gap=MAX_JUMP_HEIGHT*0.9;
     let dx=(Math.random()*2-1)*MAX_HOR_JUMP;
-    let newX=prevX+dx; if(newX<0)newX=0; if(newX>canvas.width-90)newX=canvas.width-90;
+    let newX=prevX+dx; if(newX<0)newX=0; if(newX>canvas.width-PLATFORM_WIDTH)newX=canvas.width-PLATFORM_WIDTH;
     let typeRand=Math.random(); let type="normal";
     if(typeRand<0.1)type="break";
     else if(typeRand<0.2)type="move";
-    platforms.push({x:newX,y:y-gap,width:90,height:18,type:type,vx:type==="move"?2:0,broken:false,hasSpring:Math.random()<0.15,canJump:type==="break"?true:null});
+    platforms.push({x:newX,y:y-gap,width:PLATFORM_WIDTH,height:18,type:type,vx:type==="move"?2:0,broken:false,hasSpring:Math.random()<0.15,canJump:type==="break"?true:null});
     y-=gap; prevX=newX;
   }
 }
@@ -109,7 +112,7 @@ function saveScore(name, score){
 function showGameOver(){
   finalScore.innerText=score;
   overlay.style.display="flex";
-  // **не фокусируем поле автоматически** – клавиатура не выдвигается
+  // **не фокусируем поле** – клавиатура появляется только по тапу
   let scores = JSON.parse(localStorage.getItem("tomatoJumpScores")||"[]");
   if(scores.length>0){
     highscoresDiv.innerHTML="<b>Топ-5 рекордов:</b><br>"+scores.map(s=>`${s.name}: ${s.score}`).join("<br>");
@@ -120,12 +123,17 @@ restartBtn.onclick=()=>{
   let name = playerNameInput.value.trim()||"Игрок";
   saveScore(name, score);
   overlay.style.display="none";
-  score=0; createPlayer(); createPlatforms(); gameRunning=true;
+  score=0; PLATFORM_WIDTH=90; createPlayer(); createPlatforms(); gameRunning=true;
   playerNameInput.value="";
 }
 
 function update(){
   if(!gameRunning) return;
+
+  // постепенно уменьшаем платформы каждые 5000 очков
+  let decreaseStep = Math.floor(score / 5000);
+  PLATFORM_WIDTH = Math.max(40, 90 - decreaseStep*5); // минимум 40px
+
   if(left)player.vx=-MOVE_SPEED;
   else if(right)player.vx=MOVE_SPEED;
   else player.vx=0;
@@ -168,7 +176,7 @@ function update(){
       let highest = platforms.reduce((a,b)=>a.y<b.y?a:b);
       let gap = 60 + Math.random()*50; if(gap>MAX_JUMP_HEIGHT) gap=MAX_JUMP_HEIGHT*0.9;
       let dx = (Math.random()*2-1)*MAX_HOR_JUMP;
-      let newX = highest.x + dx; if(newX<0)newX=0;if(newX>canvas.width-90)newX=canvas.width-90;
+      let newX = highest.x + dx; if(newX<0)newX=0;if(newX>canvas.width-PLATFORM_WIDTH)newX=canvas.width-PLATFORM_WIDTH;
       let r=Math.random();
       if(r<0.1)p.type="break";
       else if(r<0.2){p.type="move";p.vx=2;}
@@ -178,6 +186,7 @@ function update(){
       p.hasSpring=Math.random()<0.15;
       p.x=newX;
       p.y=highest.y-gap;
+      p.width = PLATFORM_WIDTH;
     }
   }
 
