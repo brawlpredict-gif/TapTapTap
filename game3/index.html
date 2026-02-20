@@ -66,13 +66,14 @@ button{
     <div class="char-select">
         <div class="char">
             <img src="cat_black_run.png">
-            <button onclick="startGame('black')">Cat Black</button>
+            <button onclick="startGame('black')">Васька</button>
         </div>
         <div class="char">
             <img src="cat_white_run.png">
-            <button onclick="startGame('white')">Cat White</button>
+            <button onclick="startGame('white')">Стасон</button>
         </div>
     </div>
+    <button id="fullscreenBtn">Полный экран</button>
     <div id="rotateHint">Поверните телефон горизонтально для удобной игры</div>
 </div>
 
@@ -89,6 +90,7 @@ const menu = document.getElementById("menu");
 const scoreEl = document.getElementById("score");
 const music = document.getElementById("music");
 const loseSound = document.getElementById("loseSound");
+const fullscreenBtn = document.getElementById("fullscreenBtn");
 
 let W,H;
 function resize(){
@@ -100,6 +102,17 @@ function resize(){
 window.addEventListener("resize",resize);
 resize();
 
+// Полный экран
+fullscreenBtn.addEventListener("click", ()=>{
+    if(canvas.requestFullscreen){
+        canvas.requestFullscreen();
+    } else if(canvas.webkitRequestFullscreen){
+        canvas.webkitRequestFullscreen();
+    } else if(canvas.msRequestFullscreen){
+        canvas.msRequestFullscreen();
+    }
+});
+
 const imgs = {
     black_run:new Image(),
     black_jump:new Image(),
@@ -108,7 +121,8 @@ const imgs = {
     granny_run:new Image(),
     granny_jump:new Image(),
     obstacle:new Image(),
-    background:new Image()
+    background:new Image(),
+    ground:new Image()
 };
 
 imgs.black_run.src="cat_black_run.png";
@@ -119,12 +133,13 @@ imgs.granny_run.src="granny_run.png";
 imgs.granny_jump.src="granny_jump.png";
 imgs.obstacle.src="obstacle.png";
 imgs.background.src="background.png";
+imgs.ground.src="ground.png";
 
 let player, granny, obstacles;
 let gravity=0.8, speed=6, score, gameOver=false;
-let bgX = 0;
 let shakePower = 0;
 let particles = [];
+let bgX = 0;
 
 function startGame(type){
     menu.style.display="none";
@@ -216,8 +231,8 @@ function update(){
     score+=0.05;
     scoreEl.innerText="Очки: "+Math.floor(score);
 
-    bgX -= speed*0.5;
-    if(bgX<=-W) bgX=0;
+    bgX -= speed * 0.5;
+    if(bgX <= -W) bgX = 0;
 
     if(!player.jumping && Math.random()<0.4){
         spawnDust(player.x+10,player.y+player.h-10);
@@ -253,7 +268,6 @@ function update(){
         }
     }
 
-
     obstacles=obstacles.filter(o=>o.x+o.w>0);
 
     for(let p of particles){
@@ -282,11 +296,12 @@ function draw(){
     ctx.save();
     ctx.translate(shakeX,shakeY);
 
-    ctx.drawImage(imgs.background,bgX,0,W,H);
-    ctx.drawImage(imgs.background,bgX+W,0,W,H);
+    // Движущийся фон
+    ctx.drawImage(imgs.background, bgX, 0, W, H);
+    ctx.drawImage(imgs.background, bgX + W, 0, W, H);
 
-    ctx.fillStyle="#333";
-    ctx.fillRect(0,H-70,W,70);
+    // Земля картинкой
+    ctx.drawImage(imgs.ground, 0, H-70, W, 70);
 
     for(let o of obstacles){
         ctx.drawImage(imgs.obstacle,o.x,o.y,o.w,o.h);
@@ -299,12 +314,10 @@ function draw(){
         ctx.fill();
     }
 
-    let pImg=player.jumping?
-        imgs[player.type+"_jump"]:
-        imgs[player.type+"_run"];
+    let pImg=player.jumping? imgs[player.type+"_jump"] : imgs[player.type+"_run"];
     ctx.drawImage(pImg,player.x,player.y,player.w,player.h);
 
-    let gImg=granny.jumping?imgs.granny_jump:imgs.granny_run;
+    let gImg=granny.jumping? imgs.granny_jump : imgs.granny_run;
     ctx.drawImage(gImg,granny.x,granny.y,granny.w,granny.h);
 
     ctx.restore();
