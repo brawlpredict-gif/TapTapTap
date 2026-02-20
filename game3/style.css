@@ -1,21 +1,40 @@
-<!DOCTYPE html>
-<html>
-<head>
-<meta charset="UTF-8">
-<title>Cat Runner</title>
-<link rel="stylesheet" href="style.css">
-</head>
-<body>
+body {
+  margin: 0;
+  background: black;
+  overflow: hidden;
+  color: white;
+  font-family: Arial;
+}
 
-<div id="menu">
-  <h2>Выбери кота</h2>
-  <img src="img/cat_black_run.png" id="blackCat">
-  <img src="img/cat_white_run.png" id="whiteCat">
-</div>
+#menu {
+  position: fixed;
+  inset: 0;
+  background: black;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+}
 
-<canvas id="game"></canvas>
-<button id="jumpBtn">JUMP</button>
+#menu img {
+  width: 140px;
+  margin: 10px;
+  border: 3px solid white;
+  border-radius: 10px;
+  cursor: pointer;
+}
 
-<script src="game.js"></script>
-</body>
-</html>
+canvas {
+  display: none;
+  background: #111;
+}
+
+#jumpBtn {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  font-size: 20px;
+  padding: 20px;
+  z-index: 5;
+}
