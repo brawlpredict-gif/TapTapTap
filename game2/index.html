@@ -44,7 +44,7 @@ const ctx = canvas.getContext("2d");
 function resize(){ canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
 resize();
 window.addEventListener("resize", resize);
-ф
+
 const imgFall = new Image(); imgFall.src="player_fall.png";
 const imgJump = new Image(); imgJump.src="player_jump.png";
 const springImg = new Image(); springImg.src="spring.png";
@@ -60,13 +60,20 @@ const MAX_JUMP_HEIGHT = (JUMP_FORCE*JUMP_FORCE)/(2*GRAVITY*0.9);
 const MAX_HOR_JUMP = 120;
 
 // начальная ширина платформ
-let PLATFORM_WIDTH = 90;
+let PLATFORM_WIDTH = 60; // уменьшили под меньшего персонажа
 
 let player, platforms=[], score=0, gameRunning=true;
 
 function createPlayer(){ 
-    // персонаж увеличен в 2 раза
-    player={width:60,height:75,x:canvas.width/2-60,y:canvas.height-75,vx:0,vy:0}; 
+    // уменьшаем персонажа в 2 раза
+    player = {
+        width: 60,
+        height: 75,
+        x: canvas.width/2 - 30,
+        y: canvas.height - 75,
+        vx: 0,
+        vy: 0
+    }; 
 }
 
 function createPlatforms(){
@@ -128,7 +135,7 @@ restartBtn.onclick=()=>{
   let name = playerNameInput.value.trim()||"Игрок";
   saveScore(name, score);
   overlay.style.display="none";
-  score=0; PLATFORM_WIDTH=90; createPlayer(); createPlatforms(); gameRunning=true;
+  score=0; PLATFORM_WIDTH=60; createPlayer(); createPlatforms(); gameRunning=true;
   playerNameInput.value="";
 }
 
@@ -136,7 +143,7 @@ function update(){
   if(!gameRunning) return;
 
   let decreaseStep = Math.floor(score / 5000);
-  PLATFORM_WIDTH = Math.max(40, 90 - decreaseStep*5);
+  PLATFORM_WIDTH = Math.max(40, 60 - decreaseStep*5);
 
   if(left)player.vx=-MOVE_SPEED;
   else if(right)player.vx=MOVE_SPEED;
@@ -219,4 +226,3 @@ createPlayer(); createPlatforms(); loop();
 </script>
 </body>
 </html>
-
