@@ -31,6 +31,7 @@ document.addEventListener("contextmenu", e => e.preventDefault());
 
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
+
 function resize(){ canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
 resize();
 window.addEventListener("resize", resize);
@@ -48,7 +49,7 @@ const JUMP_FORCE = -7.5;
 const MOVE_SPEED = 4.5;
 const MAX_FALL_SPEED = 12;
 
-// Максимальная высота прыжка
+// Расчёт максимальной высоты прыжка
 const MAX_JUMP_HEIGHT = (JUMP_FORCE*JUMP_FORCE)/(2*GRAVITY*0.9);
 const MAX_HOR_JUMP = 120;
 
@@ -61,14 +62,14 @@ function createPlayer(){
 player={width:60,height:75,x:canvas.width/2-30,y:canvas.height-150,vx:0,vy:0};
 }
 
-// Генерация платформ с гарантией достижимости
+// Генерация платформ
 function createPlatforms(){
 platforms=[];
 let y = canvas.height - 50;
 let prevX = canvas.width/2-45;
 
 // первая платформа под игроком
-platforms.push({x:prevX,y:y,width:90,height:18,type:"normal",vx:0,broken:false,hasSpring:false});
+platforms.push({x:prevX,y:y,width:90,height:18,type:"normal",vx:0,broken:false,hasSpring:false,canJump:true});
 y -= 70;
 
 for(let i=1;i<12;i++){
@@ -77,14 +78,14 @@ if(gap>MAX_JUMP_HEIGHT) gap = MAX_JUMP_HEIGHT*0.9;
 let dx = (Math.random()*2-1)*MAX_HOR_JUMP;
 let newX = prevX + dx;
 if(newX<0) newX=0;
-if(newX>canvas.width-90) newX=canvas.width-90;
+if(newX>canvas.width-90) newX = canvas.width-90;
 
 let typeRand=Math.random();
 let type="normal";
-if(typeRand<0.1) type="break";
-else if(typeRand<0.2) type="move";
+if(typeRand<0.1) type="break";       // красная ломаемая
+else if(typeRand<0.2) type="move";    // жёлтая движущаяся
 
-platforms.push({x:newX, y:y-gap, width:90, height:18, type:type, vx:type==="move"?2:0, broken:false, hasSpring:Math.random()<0.15});
+platforms.push({x:newX, y:y-gap, width:90, height:18, type:type, vx:type==="move"?2:0, broken:false, hasSpring:Math.random()<0.15, canJump:true});
 y -= gap;
 prevX=newX;
 }
@@ -107,7 +108,7 @@ document.body.addEventListener("touchstart",()=>{document.getElementById("music"
 function update(){
 if(!gameRunning) return;
 
-// движение
+// движение игрока
 if(left) player.vx=-MOVE_SPEED;
 else if(right) player.vx=MOVE_SPEED;
 else player.vx=0;
@@ -120,17 +121,19 @@ player.vy += GRAVITY;
 if(player.vy>MAX_FALL_SPEED) player.vy=MAX_FALL_SPEED;
 player.y += player.vy;
 
-// картинка
+// смена картинки
 currentImg = player.vy<0?imgJump:imgFall;
 
-// столкновение
+// столкновения
 if(player.vy>0){
 for(let p of platforms){
 if(p.broken) continue;
 if(player.x+player.width>p.x && player.x<p.x+p.width &&
 player.y+player.height>p.y && player.y+player.height<p.y+p.height){
-if(p.type==="break"){p.broken=true; player.vy=JUMP_FORCE;}
-else{player.vy=p.hasSpring?JUMP_FORCE*1.5:JUMP_FORCE;}
+if(!p.canJump) continue;
+player.vy=p.hasSpring?JUMP_FORCE*1.5:JUMP_FORCE;
+if(p.type==="break") p.broken=true; // ломаем красную
+p.canJump=false; // можно прыгнуть только один раз
 }
 }
 }
@@ -159,6 +162,7 @@ if(r<0.1)p.type="break";
 else if(r<0.2){p.type="move";p.vx=2;}
 else p.type="normal";
 p.broken=false;
+p.canJump=true;
 p.hasSpring=Math.random()<0.15;
 p.x=newX;
 p.y=highest.y-gap;
