@@ -31,7 +31,7 @@ canvas{display:block;}
   <button id="restartBtn">Сначала</button>
   <div id="highscores"></div>
 </div>
-<audio id="music" loop>
+<audio id="music" loop autoplay>
 <source src="music.mp3">
 </audio>
 <script>
@@ -92,7 +92,8 @@ document.addEventListener("keydown",e=>{if(e.key=="ArrowLeft")left=true;if(e.key
 document.addEventListener("keyup",e=>{if(e.key=="ArrowLeft")left=false;if(e.key=="ArrowRight")right=false;});
 
 // музыка
-document.body.addEventListener("touchstart",()=>{document.getElementById("music").play();},{once:true});
+const music = document.getElementById("music");
+music.play().catch(()=>{ /* если автоплей заблокирован, пользователь включит */ });
 
 const overlay = document.getElementById("gameoverOverlay");
 const finalScore = document.getElementById("finalScore");
@@ -112,7 +113,6 @@ function saveScore(name, score){
 function showGameOver(){
   finalScore.innerText=score;
   overlay.style.display="flex";
-  // **не фокусируем поле** – клавиатура появляется только по тапу
   let scores = JSON.parse(localStorage.getItem("tomatoJumpScores")||"[]");
   if(scores.length>0){
     highscoresDiv.innerHTML="<b>Топ-5 рекордов:</b><br>"+scores.map(s=>`${s.name}: ${s.score}`).join("<br>");
@@ -130,9 +130,9 @@ restartBtn.onclick=()=>{
 function update(){
   if(!gameRunning) return;
 
-  // постепенно уменьшаем платформы каждые 5000 очков
+  // усложнение: уменьшаем платформы каждые 5000 очков
   let decreaseStep = Math.floor(score / 5000);
-  PLATFORM_WIDTH = Math.max(40, 90 - decreaseStep*5); // минимум 40px
+  PLATFORM_WIDTH = Math.max(40, 90 - decreaseStep*5);
 
   if(left)player.vx=-MOVE_SPEED;
   else if(right)player.vx=MOVE_SPEED;
