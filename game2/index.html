@@ -76,7 +76,7 @@ function createPlatforms(){
     let typeRand=Math.random(); let type="normal";
     if(typeRand<0.1)type="break";
     else if(typeRand<0.2)type="move";
-    platforms.push({x:newX,y:y-gap,width:90,height:18,type:type,vx:type==="move"?2:0,broken:false,hasSpring:Math.random()<0.15,canJump:true});
+    platforms.push({x:newX,y:y-gap,width:90,height:18,type:type,vx:type==="move"?2:0,broken:false,hasSpring:Math.random()<0.15,canJump:type==="break"?true:null});
     y-=gap; prevX=newX;
   }
 }
@@ -122,7 +122,7 @@ function showGameOver(){
 // Рестарт
 restartBtn.onclick=()=>{
   let name = playerNameInput.value.trim()||"Игрок";
-  let scores = saveScore(name, score);
+  saveScore(name, score);
   overlay.style.display="none";
   score=0; createPlayer(); createPlatforms(); gameRunning=true;
   playerNameInput.value="";
@@ -154,9 +154,10 @@ function update(){
         if(p.type==="break" && p.canJump){
           player.vy = p.hasSpring?JUMP_FORCE*1.5:JUMP_FORCE;
           p.broken=true;
-          p.canJump=false;
+          p.canJump=false; // ограничение только для красной
         }else if(p.type!=="break"){ // зелёные и жёлтые
           player.vy = p.hasSpring?JUMP_FORCE*1.5:JUMP_FORCE;
+          // canJump остаётся true, можно прыгать бесконечно
         }
       }
     }
@@ -183,7 +184,7 @@ function update(){
       else if(r<0.2){p.type="move";p.vx=2;}
       else p.type="normal";
       p.broken=false;
-      p.canJump=true;
+      if(p.type==="break") p.canJump=true;
       p.hasSpring=Math.random()<0.15;
       p.x=newX;
       p.y=highest.y-gap;
