@@ -126,16 +126,22 @@ currentImg = player.vy<0?imgJump:imgFall;
 
 // столкновения
 if(player.vy>0){
-for(let p of platforms){
-if(p.broken) continue;
-if(player.x+player.width>p.x && player.x<p.x+p.width &&
-player.y+player.height>p.y && player.y+player.height<p.y+p.height){
-if(!p.canJump) continue;
-player.vy=p.hasSpring?JUMP_FORCE*1.5:JUMP_FORCE;
-if(p.type==="break") p.broken=true; // ломаем красную
-p.canJump=false; // можно прыгнуть только один раз
-}
-}
+    for(let p of platforms){
+        if(p.broken) continue;
+        if(player.x+player.width>p.x && player.x<p.x+p.width &&
+           player.y+player.height>p.y && player.y+player.height<p.y+p.height){
+            
+            if(p.type==="break" && p.canJump){
+                player.vy = p.hasSpring ? JUMP_FORCE*1.5 : JUMP_FORCE;
+                p.broken = true;   // красная ломается
+                p.canJump = false; // только один прыжок
+            }
+            else if(p.type!=="break"){ // зелёная и жёлтая платформы
+                player.vy = p.hasSpring ? JUMP_FORCE*1.5 : JUMP_FORCE;
+                // canJump оставляем true, чтобы можно прыгать бесконечно
+            }
+        }
+    }
 }
 
 // движение мира
@@ -193,3 +199,4 @@ resetGame(); loop();
 </script>
 </body>
 </html>
+
