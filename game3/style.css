@@ -44,3 +44,25 @@ canvas {
   color: white;
   z-index: 5;
 }
+#joystick {
+  position: fixed;
+  bottom: 60px;
+  left: 60px;
+  width: 140px;
+  height: 140px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.1);
+  border: 3px solid white;
+  z-index: 10;
+}
+
+#stick {
+  width: 60px;
+  height: 60px;
+  background: white;
+  border-radius: 50%;
+  position: absolute;
+  left: 40px;
+  top: 40px;
+}
+
