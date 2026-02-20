@@ -1,15 +1,13 @@
 <!DOCTYPE html>
 <html>
-<head>
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>TEST GAME</title>
-<link rel="stylesheet" href="style.css">
-</head>
-<body>
+<body style="background:black;color:white">
 
-<h1 id="debug">Loading...</h1>
-<canvas id="game"></canvas>
+<h1 id="a">HTML OK</h1>
+<h1 id="b">JS NOT LOADED</h1>
 
-<script src="game.js"></script>
+<script>
+document.getElementById("b").innerText = "JS OK";
+</script>
+
 </body>
 </html>
