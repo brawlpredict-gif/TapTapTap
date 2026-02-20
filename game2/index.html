@@ -50,7 +50,6 @@ const imgJump = new Image(); imgJump.src="player_jump.png";
 let currentImg = imgFall;
 const background = new Image(); background.src="background.png";
 
-// ФИЗИКА
 const GRAVITY = 0.18;
 const JUMP_FORCE = -7.5;
 const MOVE_SPEED = 4.5;
@@ -62,12 +61,11 @@ let player, platforms=[], score=0, gameRunning=true;
 
 function createPlayer(){ player={width:60,height:75,x:canvas.width/2-30,y:canvas.height-150,vx:0,vy:0}; }
 
-// Генерация платформ
 function createPlatforms(){
   platforms=[];
   let y = canvas.height - 50;
   let prevX = canvas.width/2-45;
-  platforms.push({x:prevX,y:y,width:90,height:18,type:"normal",vx:0,broken:false,hasSpring:false,canJump:true});
+  platforms.push({x:prevX,y:y,width:90,height:18,type:"normal",vx:0,broken:false,hasSpring:false});
   y-=70;
   for(let i=1;i<12;i++){
     let gap = 60 + Math.random()*50; if(gap>MAX_JUMP_HEIGHT) gap=MAX_JUMP_HEIGHT*0.9;
@@ -93,7 +91,6 @@ document.addEventListener("keyup",e=>{if(e.key=="ArrowLeft")left=false;if(e.key=
 // музыка
 document.body.addEventListener("touchstart",()=>{document.getElementById("music").play();},{once:true});
 
-// GAMEOVER и рекорды
 const overlay = document.getElementById("gameoverOverlay");
 const finalScore = document.getElementById("finalScore");
 const playerNameInput = document.getElementById("playerName");
@@ -119,7 +116,6 @@ function showGameOver(){
   }else highscoresDiv.innerHTML="";
 }
 
-// Рестарт
 restartBtn.onclick=()=>{
   let name = playerNameInput.value.trim()||"Игрок";
   saveScore(name, score);
@@ -128,10 +124,8 @@ restartBtn.onclick=()=>{
   playerNameInput.value="";
 }
 
-// ОБНОВЛЕНИЕ И РИСОВКА
 function update(){
   if(!gameRunning) return;
-
   if(left)player.vx=-MOVE_SPEED;
   else if(right)player.vx=MOVE_SPEED;
   else player.vx=0;
@@ -145,7 +139,6 @@ function update(){
 
   currentImg = player.vy<0?imgJump:imgFall;
 
-  // столкновения
   if(player.vy>0){
     for(let p of platforms){
       if(p.broken) continue;
@@ -154,16 +147,15 @@ function update(){
         if(p.type==="break" && p.canJump){
           player.vy = p.hasSpring?JUMP_FORCE*1.5:JUMP_FORCE;
           p.broken=true;
-          p.canJump=false; // ограничение только для красной
-        }else if(p.type!=="break"){ // зелёные и жёлтые
+          p.canJump=false;
+        }else if(p.type!=="break"){
           player.vy = p.hasSpring?JUMP_FORCE*1.5:JUMP_FORCE;
-          // canJump остаётся true, можно прыгать бесконечно
+          // **зелёные и жёлтые можно использовать сколько угодно**
         }
       }
     }
   }
 
-  // движение мира
   if(player.y<canvas.height*0.4){
     let diff = canvas.height*0.4-player.y;
     player.y = canvas.height*0.4;
@@ -171,7 +163,6 @@ function update(){
     score+=Math.floor(diff);
   }
 
-  // респавн платформ
   for(let p of platforms){
     if(p.type==="move"){p.x+=p.vx;if(p.x<0||p.x+p.width>canvas.width)p.vx*=-1;}
     if(p.y>canvas.height){
