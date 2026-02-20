@@ -44,7 +44,7 @@ const ctx = canvas.getContext("2d");
 function resize(){ canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
 resize();
 window.addEventListener("resize", resize);
-
+ф
 const imgFall = new Image(); imgFall.src="player_fall.png";
 const imgJump = new Image(); imgJump.src="player_jump.png";
 const springImg = new Image(); springImg.src="spring.png";
@@ -66,7 +66,7 @@ let player, platforms=[], score=0, gameRunning=true;
 
 function createPlayer(){ 
     // персонаж увеличен в 2 раза
-    player={width:120,height:150,x:canvas.width/2-60,y:canvas.height-150,vx:0,vy:0}; 
+    player={width:60,height:75,x:canvas.width/2-60,y:canvas.height-75,vx:0,vy:0}; 
 }
 
 function createPlatforms(){
@@ -219,3 +219,4 @@ createPlayer(); createPlatforms(); loop();
 </script>
 </body>
 </html>
+
