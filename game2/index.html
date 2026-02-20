@@ -12,6 +12,10 @@ canvas{display:block;}
 #controls{position:fixed;bottom:20px;left:0;width:100%;display:flex;justify-content:space-between;padding:0 30px;z-index:10;}
 .btn{width:90px;height:90px;border-radius:50%;border:none;background:rgba(0,0,0,0.35);color:white;font-size:36px;outline:none;}
 .btn:active{background:rgba(0,0,0,0.6);}
+#gameoverOverlay{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);display:flex;flex-direction:column;justify-content:center;align-items:center;z-index:20;color:white;font-size:20px;display:none;}
+#gameoverOverlay input{padding:10px;font-size:18px;margin-top:10px;}
+#gameoverOverlay button{padding:10px 20px;margin-top:10px;font-size:18px;}
+#highscores{margin-top:15px;text-align:center;}
 </style>
 </head>
 <body>
@@ -20,6 +24,12 @@ canvas{display:block;}
 <div id="controls">
 <button class="btn" id="left">←</button>
 <button class="btn" id="right">→</button>
+</div>
+<div id="gameoverOverlay">
+  <div>Игра окончена! Ваш счёт: <span id="finalScore">0</span></div>
+  <input type="text" id="playerName" placeholder="Введите имя">
+  <button id="restartBtn">Сначала</button>
+  <div id="highscores"></div>
 </div>
 <audio id="music" loop>
 <source src="music.mp3">
@@ -31,7 +41,6 @@ document.addEventListener("contextmenu", e => e.preventDefault());
 
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
-
 function resize(){ canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
 resize();
 window.addEventListener("resize", resize);
@@ -39,164 +48,168 @@ window.addEventListener("resize", resize);
 const imgFall = new Image(); imgFall.src="player_fall.png";
 const imgJump = new Image(); imgJump.src="player_jump.png";
 let currentImg = imgFall;
-
-const background = new Image();
-background.src="background.png";
+const background = new Image(); background.src="background.png";
 
 // ФИЗИКА
 const GRAVITY = 0.18;
 const JUMP_FORCE = -7.5;
 const MOVE_SPEED = 4.5;
 const MAX_FALL_SPEED = 12;
-
-// Расчёт максимальной высоты прыжка
 const MAX_JUMP_HEIGHT = (JUMP_FORCE*JUMP_FORCE)/(2*GRAVITY*0.9);
 const MAX_HOR_JUMP = 120;
 
-let player;
-let platforms = [];
-let score = 0;
-let gameRunning = true;
+let player, platforms=[], score=0, gameRunning=true;
 
-function createPlayer(){
-player={width:60,height:75,x:canvas.width/2-30,y:canvas.height-150,vx:0,vy:0};
-}
+function createPlayer(){ player={width:60,height:75,x:canvas.width/2-30,y:canvas.height-150,vx:0,vy:0}; }
 
 // Генерация платформ
 function createPlatforms(){
-platforms=[];
-let y = canvas.height - 50;
-let prevX = canvas.width/2-45;
-
-// первая платформа под игроком
-platforms.push({x:prevX,y:y,width:90,height:18,type:"normal",vx:0,broken:false,hasSpring:false,canJump:true});
-y -= 70;
-
-for(let i=1;i<12;i++){
-let gap = 60 + Math.random()*50;
-if(gap>MAX_JUMP_HEIGHT) gap = MAX_JUMP_HEIGHT*0.9;
-let dx = (Math.random()*2-1)*MAX_HOR_JUMP;
-let newX = prevX + dx;
-if(newX<0) newX=0;
-if(newX>canvas.width-90) newX = canvas.width-90;
-
-let typeRand=Math.random();
-let type="normal";
-if(typeRand<0.1) type="break";       // красная ломаемая
-else if(typeRand<0.2) type="move";    // жёлтая движущаяся
-
-platforms.push({x:newX, y:y-gap, width:90, height:18, type:type, vx:type==="move"?2:0, broken:false, hasSpring:Math.random()<0.15, canJump:true});
-y -= gap;
-prevX=newX;
+  platforms=[];
+  let y = canvas.height - 50;
+  let prevX = canvas.width/2-45;
+  platforms.push({x:prevX,y:y,width:90,height:18,type:"normal",vx:0,broken:false,hasSpring:false,canJump:true});
+  y-=70;
+  for(let i=1;i<12;i++){
+    let gap = 60 + Math.random()*50; if(gap>MAX_JUMP_HEIGHT) gap=MAX_JUMP_HEIGHT*0.9;
+    let dx=(Math.random()*2-1)*MAX_HOR_JUMP;
+    let newX=prevX+dx; if(newX<0)newX=0; if(newX>canvas.width-90)newX=canvas.width-90;
+    let typeRand=Math.random(); let type="normal";
+    if(typeRand<0.1)type="break";
+    else if(typeRand<0.2)type="move";
+    platforms.push({x:newX,y:y-gap,width:90,height:18,type:type,vx:type==="move"?2:0,broken:false,hasSpring:Math.random()<0.15,canJump:true});
+    y-=gap; prevX=newX;
+  }
 }
-}
-
-function resetGame(){ score=0; createPlayer(); createPlatforms(); gameRunning=true; }
 
 // управление
-let left=false, right=false;
+let left=false,right=false;
 document.getElementById("left").ontouchstart=e=>{e.preventDefault();left=true;}
 document.getElementById("left").ontouchend=e=>{e.preventDefault();left=false;}
 document.getElementById("right").ontouchstart=e=>{e.preventDefault();right=true;}
 document.getElementById("right").ontouchend=e=>{e.preventDefault();right=false;}
-document.addEventListener("keydown", e=>{if(e.key=="ArrowLeft") left=true;if(e.key=="ArrowRight") right=true;});
-document.addEventListener("keyup", e=>{if(e.key=="ArrowLeft") left=false;if(e.key=="ArrowRight") right=false;});
+document.addEventListener("keydown",e=>{if(e.key=="ArrowLeft")left=true;if(e.key=="ArrowRight")right=true;});
+document.addEventListener("keyup",e=>{if(e.key=="ArrowLeft")left=false;if(e.key=="ArrowRight")right=false;});
 
 // музыка
 document.body.addEventListener("touchstart",()=>{document.getElementById("music").play();},{once:true});
 
+// GAMEOVER и рекорды
+const overlay = document.getElementById("gameoverOverlay");
+const finalScore = document.getElementById("finalScore");
+const playerNameInput = document.getElementById("playerName");
+const restartBtn = document.getElementById("restartBtn");
+const highscoresDiv = document.getElementById("highscores");
+
+function saveScore(name, score){
+  let scores = JSON.parse(localStorage.getItem("tomatoJumpScores")||"[]");
+  scores.push({name:name,score:score});
+  scores.sort((a,b)=>b.score-a.score);
+  if(scores.length>5)scores=scores.slice(0,5);
+  localStorage.setItem("tomatoJumpScores",JSON.stringify(scores));
+  return scores;
+}
+
+function showGameOver(){
+  finalScore.innerText=score;
+  overlay.style.display="flex";
+  playerNameInput.focus();
+  let scores = JSON.parse(localStorage.getItem("tomatoJumpScores")||"[]");
+  if(scores.length>0){
+    highscoresDiv.innerHTML="<b>Топ-5 рекордов:</b><br>"+scores.map(s=>`${s.name}: ${s.score}`).join("<br>");
+  }else highscoresDiv.innerHTML="";
+}
+
+// Рестарт
+restartBtn.onclick=()=>{
+  let name = playerNameInput.value.trim()||"Игрок";
+  let scores = saveScore(name, score);
+  overlay.style.display="none";
+  score=0; createPlayer(); createPlatforms(); gameRunning=true;
+  playerNameInput.value="";
+}
+
+// ОБНОВЛЕНИЕ И РИСОВКА
 function update(){
-if(!gameRunning) return;
+  if(!gameRunning) return;
 
-// движение игрока
-if(left) player.vx=-MOVE_SPEED;
-else if(right) player.vx=MOVE_SPEED;
-else player.vx=0;
-player.x+=player.vx;
-if(player.x<-player.width) player.x=canvas.width;
-if(player.x>canvas.width) player.x=-player.width;
+  if(left)player.vx=-MOVE_SPEED;
+  else if(right)player.vx=MOVE_SPEED;
+  else player.vx=0;
+  player.x+=player.vx;
+  if(player.x<-player.width)player.x=canvas.width;
+  if(player.x>canvas.width)player.x=-player.width;
 
-// гравитация
-player.vy += GRAVITY;
-if(player.vy>MAX_FALL_SPEED) player.vy=MAX_FALL_SPEED;
-player.y += player.vy;
+  player.vy+=GRAVITY;
+  if(player.vy>MAX_FALL_SPEED)player.vy=MAX_FALL_SPEED;
+  player.y+=player.vy;
 
-// смена картинки
-currentImg = player.vy<0?imgJump:imgFall;
+  currentImg = player.vy<0?imgJump:imgFall;
 
-// столкновения
-if(player.vy>0){
+  // столкновения
+  if(player.vy>0){
     for(let p of platforms){
-        if(p.broken) continue;
-        if(player.x+player.width>p.x && player.x<p.x+p.width &&
-           player.y+player.height>p.y && player.y+player.height<p.y+p.height){
-            
-            if(p.type==="break" && p.canJump){
-                player.vy = p.hasSpring ? JUMP_FORCE*1.5 : JUMP_FORCE;
-                p.broken = true;   // красная ломается
-                p.canJump = false; // только один прыжок
-            }
-            else if(p.type!=="break"){ // зелёная и жёлтая платформы
-                player.vy = p.hasSpring ? JUMP_FORCE*1.5 : JUMP_FORCE;
-                // canJump оставляем true, чтобы можно прыгать бесконечно
-            }
+      if(p.broken) continue;
+      if(player.x+player.width>p.x && player.x<p.x+p.width &&
+         player.y+player.height>p.y && player.y+player.height<p.y+p.height){
+        if(p.type==="break" && p.canJump){
+          player.vy = p.hasSpring?JUMP_FORCE*1.5:JUMP_FORCE;
+          p.broken=true;
+          p.canJump=false;
+        }else if(p.type!=="break"){ // зелёные и жёлтые
+          player.vy = p.hasSpring?JUMP_FORCE*1.5:JUMP_FORCE;
         }
+      }
     }
-}
+  }
 
-// движение мира
-if(player.y<canvas.height*0.4){
-let diff = canvas.height*0.4-player.y;
-player.y = canvas.height*0.4;
-for(let p of platforms) p.y += diff;
-score += Math.floor(diff);
-}
+  // движение мира
+  if(player.y<canvas.height*0.4){
+    let diff = canvas.height*0.4-player.y;
+    player.y = canvas.height*0.4;
+    for(let p of platforms) p.y+=diff;
+    score+=Math.floor(diff);
+  }
 
-// респавн платформ
-for(let p of platforms){
-if(p.type==="move"){p.x+=p.vx;if(p.x<0||p.x+p.width>canvas.width)p.vx*=-1;}
-if(p.y>canvas.height){
-let highest = platforms.reduce((a,b)=>a.y<b.y?a:b);
-let gap = 60 + Math.random()*50;
-if(gap>MAX_JUMP_HEIGHT) gap = MAX_JUMP_HEIGHT*0.9;
-let dx = (Math.random()*2-1)*MAX_HOR_JUMP;
-let newX = highest.x + dx;
-if(newX<0) newX=0;
-if(newX>canvas.width-90)newX=canvas.width-90;
-let r=Math.random();
-if(r<0.1)p.type="break";
-else if(r<0.2){p.type="move";p.vx=2;}
-else p.type="normal";
-p.broken=false;
-p.canJump=true;
-p.hasSpring=Math.random()<0.15;
-p.x=newX;
-p.y=highest.y-gap;
-}
-}
+  // респавн платформ
+  for(let p of platforms){
+    if(p.type==="move"){p.x+=p.vx;if(p.x<0||p.x+p.width>canvas.width)p.vx*=-1;}
+    if(p.y>canvas.height){
+      let highest = platforms.reduce((a,b)=>a.y<b.y?a:b);
+      let gap = 60 + Math.random()*50; if(gap>MAX_JUMP_HEIGHT) gap=MAX_JUMP_HEIGHT*0.9;
+      let dx = (Math.random()*2-1)*MAX_HOR_JUMP;
+      let newX = highest.x + dx; if(newX<0)newX=0;if(newX>canvas.width-90)newX=canvas.width-90;
+      let r=Math.random();
+      if(r<0.1)p.type="break";
+      else if(r<0.2){p.type="move";p.vx=2;}
+      else p.type="normal";
+      p.broken=false;
+      p.canJump=true;
+      p.hasSpring=Math.random()<0.15;
+      p.x=newX;
+      p.y=highest.y-gap;
+    }
+  }
 
-// падение
-if(player.y>canvas.height){gameRunning=false; setTimeout(resetGame,500);}
+  if(player.y>canvas.height){gameRunning=false; showGameOver();}
 }
 
 function draw(){
-ctx.clearRect(0,0,canvas.width,canvas.height);
-ctx.drawImage(background,0,0,canvas.width,canvas.height);
-ctx.drawImage(currentImg,player.x,player.y,player.width,player.height);
-for(let p of platforms){
-if(p.broken) continue;
-if(p.type==="break") ctx.fillStyle="#e74c3c";
-else if(p.type==="move") ctx.fillStyle="#f1c40f";
-else ctx.fillStyle="#2ecc71";
-ctx.fillRect(p.x,p.y,p.width,p.height);
-if(p.hasSpring){ctx.fillStyle="white";ctx.fillRect(p.x+p.width/2-5,p.y-10,10,10);}
-}
-document.getElementById("score").innerText=score;
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  ctx.drawImage(background,0,0,canvas.width,canvas.height);
+  ctx.drawImage(currentImg,player.x,player.y,player.width,player.height);
+  for(let p of platforms){
+    if(p.broken) continue;
+    if(p.type==="break") ctx.fillStyle="#e74c3c";
+    else if(p.type==="move") ctx.fillStyle="#f1c40f";
+    else ctx.fillStyle="#2ecc71";
+    ctx.fillRect(p.x,p.y,p.width,p.height);
+    if(p.hasSpring){ctx.fillStyle="white";ctx.fillRect(p.x+p.width/2-5,p.y-10,10,10);}
+  }
+  document.getElementById("score").innerText = score;
 }
 
 function loop(){update();draw();requestAnimationFrame(loop);}
-resetGame(); loop();
+createPlayer(); createPlatforms(); loop();
 </script>
 </body>
 </html>
-
