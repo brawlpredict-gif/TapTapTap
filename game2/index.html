@@ -59,11 +59,15 @@ const MAX_FALL_SPEED = 12;
 const MAX_JUMP_HEIGHT = (JUMP_FORCE*JUMP_FORCE)/(2*GRAVITY*0.9);
 const MAX_HOR_JUMP = 120;
 
+// начальная ширина платформ
 let PLATFORM_WIDTH = 90;
 
 let player, platforms=[], score=0, gameRunning=true;
 
-function createPlayer(){ player={width:60,height:75,x:canvas.width/2-30,y:canvas.height-150,vx:0,vy:0}; }
+function createPlayer(){ 
+    // персонаж увеличен в 2 раза
+    player={width:120,height:150,x:canvas.width/2-60,y:canvas.height-150,vx:0,vy:0}; 
+}
 
 function createPlatforms(){
   platforms=[];
@@ -153,7 +157,7 @@ function update(){
       if(player.x+player.width>p.x && player.x<p.x+p.width &&
          player.y+player.height>p.y && player.y+player.height<p.y+p.height){
         if(p.type==="break" && p.canJump){
-          player.vy = p.hasSpring?JUMP_FORCE*3:JUMP_FORCE; // пружина теперь 3×
+          player.vy = p.hasSpring?JUMP_FORCE*3:JUMP_FORCE;
           p.broken=true;
           p.canJump=false;
         }else if(p.type!=="break"){
