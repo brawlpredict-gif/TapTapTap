@@ -1,23 +1,26 @@
-console.log("GAME JS LOADED");
+console.log("GAME START");
 
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
 
-canvas.width = innerWidth;
-canvas.height = innerHeight;
+function resize() {
+  canvas.width = innerWidth;
+  canvas.height = innerHeight;
+}
+resize();
+window.onresize = resize;
 
-let groundY = canvas.height - 140;
+let groundY;
 let gravity = 1.2;
 
-let player = { x: 100, y: groundY, vy: 0, onGround: true };
-let granny = { x: -200, y: groundY, speed: 4 };
+let player = { x: 120, y: 0, vy: 0, onGround: true };
+let granny = { x: -250, y: 0, speed: 4 };
 
 let playerRun = new Image();
 let playerJump = new Image();
 
 const grannyRun = new Image();
 grannyRun.src = "granny_run.png";
-
 const grannyJump = new Image();
 grannyJump.src = "granny_jump.png";
 
@@ -36,6 +39,10 @@ function startGame(cat) {
     playerJump.src = "cat_white_jump.png";
   }
 
+  groundY = canvas.height - 140;
+  player.y = groundY;
+  granny.y = groundY;
+
   requestAnimationFrame(loop);
 }
 
@@ -51,11 +58,12 @@ document.addEventListener("keydown", e => {
 });
 document.getElementById("jumpBtn").onclick = jump;
 
-function safeDraw(img, x, y, w, h) {
-  if (img && img.complete && img.naturalWidth > 0) {
+// Рисуем даже если картинка не загрузилась
+function drawSafe(img, x, y, w, h, color="red") {
+  if (img.complete && img.naturalWidth > 0) {
     ctx.drawImage(img, x, y, w, h);
   } else {
-    ctx.fillStyle = "cyan";
+    ctx.fillStyle = color;
     ctx.fillRect(x, y, w, h);
   }
 }
@@ -63,7 +71,7 @@ function safeDraw(img, x, y, w, h) {
 function loop() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-  // физика
+  // физика кота
   player.vy += gravity;
   player.y += player.vy;
 
@@ -77,21 +85,21 @@ function loop() {
   granny.x += granny.speed;
 
   // если догнала
-  if (granny.x + 120 > player.x) {
+  if (granny.x + 100 > player.x) {
     alert("Бабка догнала!");
     location.reload();
   }
 
   // земля
   for (let i = 0; i < canvas.width; i += 128) {
-    safeDraw(groundImg, i, groundY + 90, 128, 50);
+    drawSafe(groundImg, i, groundY + 90, 128, 50, "green");
   }
 
   // кот
-  safeDraw(player.onGround ? playerRun : playerJump, player.x, player.y - 120, 120, 120);
+  drawSafe(player.onGround ? playerRun : playerJump, player.x, player.y - 120, 120, 120, "blue");
 
   // бабка
-  safeDraw(grannyRun, granny.x, granny.y - 120, 120, 120);
+  drawSafe(grannyRun, granny.x, granny.y - 120, 120, 120, "purple");
 
   requestAnimationFrame(loop);
 }
