@@ -2,13 +2,18 @@ body {
   margin: 0;
   overflow: hidden;
   background: black;
-  font-family: Arial, sans-serif;
+  font-family: Arial;
 }
 
+/* Canvas НИЖЕ меню */
 canvas {
-  display: block;
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 1;
 }
 
+/* Меню ПОВЕРХ */
 #menu {
   position: fixed;
   top: 0;
@@ -19,13 +24,14 @@ canvas {
   color: white;
   text-align: center;
   padding-top: 20vh;
-  z-index: 10;
+  z-index: 9999;
 }
 
 #menu img {
-  width: 120px;
+  width: 140px;
   margin: 20px;
   border: 3px solid white;
-  border-radius: 10px;
+  border-radius: 12px;
   cursor: pointer;
+  touch-action: manipulation;
 }
