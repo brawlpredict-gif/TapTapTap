@@ -1,13 +1,21 @@
 <!DOCTYPE html>
-<html>
-<body style="background:black;color:white">
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Побег от бабки</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
 
-<h1 id="a">HTML OK</h1>
-<h1 id="b">JS NOT LOADED</h1>
+<div id="menu">
+  <h2>Выбери кота</h2>
+  <img src="cat_black.png" onclick="startGame('black')">
+  <img src="cat_white.png" onclick="startGame('white')">
+</div>
 
-<script>
-document.getElementById("b").innerText = "JS OK";
-</script>
+<canvas id="game"></canvas>
 
+<script src="game.js"></script>
 </body>
 </html>
