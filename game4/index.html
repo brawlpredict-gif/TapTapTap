@@ -120,8 +120,21 @@ function jump() {
     jumpSound.currentTime=0; jumpSound.play().catch(()=>{});
 }
 
-document.addEventListener("touchstart", jump);
-document.addEventListener("mousedown", jump);
+let touchUsed = false;
+
+document.addEventListener("touchstart", e => {
+    touchUsed = true;
+    jump();
+});
+
+document.addEventListener("mousedown", e => {
+    if (!touchUsed) jump();
+});
+
+// Сбрасываем touchUsed после короткой паузы, чтобы мышь снова работала
+document.addEventListener("touchend", e => {
+    setTimeout(() => { touchUsed = false; }, 100);
+});
 
 function update(timestamp) {
     let deltaTime = (timestamp - lastTime)/1000;
@@ -216,4 +229,5 @@ requestAnimationFrame(update);
 </script>
 
 </body>
+
 </html>
