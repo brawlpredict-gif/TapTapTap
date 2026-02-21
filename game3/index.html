@@ -73,7 +73,6 @@ button{
             <button onclick="startGame('white')">Стасон</button>
         </div>
     </div>
-    <button id="fullscreenBtn">Полный экран</button>
     <div id="rotateHint">Поверните телефон горизонтально для удобной игры</div>
 </div>
 
@@ -259,7 +258,7 @@ function update(){
 
         if(collide(player,o)){
             speed=5.5;
-            granny.x+=0.5;
+            granny.x+=1.5;
             shakePower=10;
         }
 
@@ -345,3 +344,4 @@ document.addEventListener("selectstart",e=>e.preventDefault());
 </script>
 </body>
 </html>
+
