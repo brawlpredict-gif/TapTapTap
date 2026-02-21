@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0">
-<title>Flappy Clone with Clouds & Dynamic Background</title>
+<title>Flappy Vasya</title>
 
 <style>
 html, body {
@@ -154,7 +154,7 @@ function update(timestamp) {
     }
 
     // ===== Смена фона каждые 30 очков =====
-    currentBgIndex = Math.floor(score/20) % bgImgs.length;
+    currentBgIndex = Math.floor(score/15) % bgImgs.length;
     ctx.drawImage(bgImgs[currentBgIndex],0,0,canvas.width,canvas.height);
 
     // ===== Облака =====
@@ -231,3 +231,4 @@ requestAnimationFrame(update);
 </body>
 
 </html>
+
