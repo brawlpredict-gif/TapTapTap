@@ -2,239 +2,394 @@
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0">
-<title>Flappy Vasya</title>
-
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Flappy Universe</title>
 <style>
-html, body {
-    margin: 0;
-    padding: 0;
-    overflow: hidden;
-    touch-action: none;
-    user-select: none;
-    -webkit-user-select: none;
+html,body{
+margin:0;
+padding:0;
+overflow:hidden;
+touch-action:none;
+user-select:none;
+background:black;
 }
-
-canvas { display: block; }
+canvas{display:block;}
+button{
+position:absolute;
+left:50%;
+transform:translateX(-50%);
+padding:12px 20px;
+font-size:18px;
+border:none;
+border-radius:10px;
+display:none;
+}
+#playBtn{bottom:160px;}
+#shopBtn{bottom:100px;}
+#buyShieldBtn{bottom:140px;}
+#backBtn{bottom:80px;}
 </style>
 </head>
 <body>
 
 <canvas id="game"></canvas>
 
+<button id="playBtn">Играть</button>
+<button id="shopBtn">Магазин</button>
+<button id="buyShieldBtn">Купить щит (500)</button>
+<button id="backBtn">Назад</button>
+
 <audio id="music" src="music.mp3" loop></audio>
 <audio id="jumpSound" src="jump.mp3"></audio>
 
 <script>
-const canvas = document.getElementById("game");
-const ctx = canvas.getContext("2d");
-const music = document.getElementById("music");
-const jumpSound = document.getElementById("jumpSound");
+const canvas=document.getElementById("game");
+const ctx=canvas.getContext("2d");
+const music=document.getElementById("music");
+const jumpSound=document.getElementById("jumpSound");
 
-function resize() {
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
-}
+const playBtn=document.getElementById("playBtn");
+const shopBtn=document.getElementById("shopBtn");
+const buyShieldBtn=document.getElementById("buyShieldBtn");
+const backBtn=document.getElementById("backBtn");
+
+function resize(){canvas.width=window.innerWidth;canvas.height=window.innerHeight;}
 resize();
-window.addEventListener("resize", resize);
-document.addEventListener("contextmenu", e => e.preventDefault());
+window.addEventListener("resize",resize);
 
-// ===== Картинки =====
-const birdImg = new Image();
-const bgImgs = [
-    new Image(),
-    new Image(),
-    new Image()
-];
-birdImg.src = "bird.png";
-bgImgs[0].src = "background1.jpg";
-bgImgs[1].src = "background2.jpg";
-bgImgs[2].src = "background3.jpg";
+// ===== КАРТИНКИ =====
+const birdImg=new Image();
+const birdShieldImg=new Image();
+const portalImg=new Image();
+const spaceBg=new Image();
 
-let imagesReady = false;
-let loadedCount = 0;
-[birdImg, ...bgImgs].forEach(img => {
-    img.onload = () => {
-        loadedCount++;
-        if (loadedCount === 4) imagesReady = true;
-    };
+birdImg.src="bird.png";
+birdShieldImg.src="bird_shield.png";
+portalImg.src="portal.gif";
+spaceBg.src="space_bg.jpg";
+
+const bgImgs=[];
+for(let i=1;i<=10;i++){
+let img=new Image();
+img.src="background"+i+".jpg";
+bgImgs.push(img);
+}
+
+// ===== ОБЛАКА =====
+let clouds=[];
+for(let i=0;i<5;i++){
+clouds.push({
+x:Math.random()*canvas.width,
+y:Math.random()*canvas.height*0.5,
+w:80+Math.random()*60,
+h:40+Math.random()*30,
+speed:20+Math.random()*30
+});
+}
+
+// ===== ПЕРЕМЕННЫЕ =====
+let gravity=1400;
+let velocity=0;
+let birdY=0;
+let birdX=120;
+let birdSize=60;
+
+let pipes=[];
+let pipeWidth=55;
+let pipeGap=240;
+let pipeSpeed=250;
+
+let score=0;
+let totalScore=0;
+
+let gameOver=false;
+let started=false;
+let lastTime=0;
+
+let coins=parseInt(localStorage.getItem("coins"))||0;
+let shieldOwned=false;
+let shieldActive=false;
+let invincibleTime=0;
+
+let inShop=false;
+let inSpace=false;
+let spaceScore=0;
+
+let portalShown=false;
+let portalActive=false;
+let portalObj=null;
+
+let portalPulses=[];
+
+function init(){birdY=canvas.height/2;}
+init();
+
+function createPipe(){
+if(!inSpace && !portalShown && totalScore>=50){
+portalShown=true;
+portalActive=true;
+portalObj={
+x:canvas.width,
+y:canvas.height/2-100,
+width:120,
+height:200
+};
+return;
+}
+let topHeight=Math.random()*(canvas.height-pipeGap-200)+100;
+pipes.push({x:canvas.width,top:topHeight,passed:false});
+}
+setInterval(()=>{if(started&&!gameOver&&!inShop)createPipe();},2300);
+
+function startMusic(){music.pause();music.currentTime=0;music.play().catch(()=>{});}
+function stopMusic(){music.pause();music.currentTime=0;}
+
+function resetGame(){
+birdY=canvas.height/2;
+velocity=0;
+pipes=[];
+score=0;
+totalScore=0;
+spaceScore=0;
+inSpace=false;
+portalActive=false;
+portalObj=null;
+portalPulses=[];
+gameOver=false;
+started=true;
+shieldActive=shieldOwned;
+invincibleTime=1;
+portalShown=false;
+startMusic();
+hideButtons();
+}
+
+function jump(){
+if(inShop)return;
+if(!started){started=true;startMusic();return;}
+if(gameOver)return;
+velocity=-520;
+jumpSound.currentTime=0;
+jumpSound.play().catch(()=>{});
+}
+document.addEventListener("touchstart",jump);
+document.addEventListener("mousedown",jump);
+
+// ===== ПОРТАЛ ИМПУЛЬСЫ (старый стиль, круги к игроку) =====
+function addPortalPulse(){
+if(portalObj){
+portalPulses.push({
+x:portalObj.x, // левая сторона портала (к игроку)
+y:portalObj.y+portalObj.height/2,
+radius:10,
+alpha:0.6
+});
+}
+}
+
+function drawPortalPulses(deltaTime){
+for(let i=portalPulses.length-1;i>=0;i--){
+let p=portalPulses[i];
+p.radius+=300*deltaTime;
+p.alpha-=0.8*deltaTime;
+
+ctx.beginPath();
+ctx.arc(p.x,p.y,p.radius,0,Math.PI*2);
+ctx.strokeStyle=`rgba(0,255,255,${p.alpha})`;
+ctx.lineWidth=4;
+ctx.stroke();
+
+if(p.alpha<=0)portalPulses.splice(i,1);
+}
+}
+
+function update(timestamp){
+let deltaTime=(timestamp-lastTime)/1000||0;
+lastTime=timestamp;
+
+ctx.clearRect(0,0,canvas.width,canvas.height);
+
+// ФОН
+if(inSpace){
+ctx.drawImage(spaceBg,0,0,canvas.width,canvas.height);
+}else{
+let bgIndex=(Math.floor(score/2))%bgImgs.length;
+ctx.drawImage(bgImgs[bgIndex],0,0,canvas.width,canvas.height);
+}
+
+// ОБЛАКА
+clouds.forEach(c=>{
+c.x-=c.speed*deltaTime;
+ctx.globalAlpha=0.6;
+ctx.fillStyle="white";
+ctx.beginPath();
+ctx.ellipse(c.x,c.y,c.w,c.h,0,0,Math.PI*2);
+ctx.fill();
+ctx.globalAlpha=1;
+if(c.x+c.w<0)c.x=canvas.width+c.w;
 });
 
-// ===== Игровые переменные =====
-let gravity = 1400;
-let velocity = 0;
-let birdY = 0;
-let birdX = 120;
-let birdSize = 60;
-
-let pipes = [];
-let pipeWidth = 55;
-let pipeGap = 240;
-let pipeSpeed = 250;
-
-let clouds = [];
-for (let i = 0; i < 5; i++) {
-    clouds.push({
-        x: Math.random() * canvas.width,
-        y: Math.random() * canvas.height*0.5,
-        size: 80 + Math.random()*80,
-        speed: 20 + Math.random()*30
-    });
+if(inShop){
+ctx.fillStyle="white";
+ctx.font="40px Arial";
+ctx.textAlign="center";
+ctx.fillText("Монеты: "+coins,canvas.width/2,150);
+ctx.drawImage(birdShieldImg,canvas.width/2-40,220,80,80);
+ctx.fillText("Щит (500)",canvas.width/2,340);
+requestAnimationFrame(update);
+return;
 }
 
-let score = 0;
-let gameOver = false;
-let started = false;
-let lastTime = 0;
-
-let currentBgIndex = 0;
-
-// ===== Функции игры =====
-function initGame() { birdY = canvas.height/2; }
-
-function createPipe() {
-    let topHeight = Math.random() * (canvas.height - pipeGap - 200) + 100;
-    pipes.push({ x: canvas.width, top: topHeight, passed: false });
-}
-setInterval(() => { if(!gameOver && started) createPipe(); }, 2500);
-
-function startMusic() { music.pause(); music.currentTime=0; music.play().catch(()=>{}); }
-function stopMusic() { music.pause(); music.currentTime=0; }
-
-function resetGame() {
-    birdY = canvas.height / 2;
-    velocity = 0;
-    pipes = [];
-    score = 0;
-    gameOver = false;
-    started = true;
-    currentBgIndex = 0;
-    startMusic();
+if(!started){
+ctx.fillStyle="white";
+ctx.font="40px Arial";
+ctx.textAlign="center";
+ctx.fillText("Тапни чтобы начать",canvas.width/2,canvas.height/2);
+requestAnimationFrame(update);
+return;
 }
 
-function jump() {
-    if (!imagesReady) return;
-    if (!started) { started=true; startMusic(); }
-    if (gameOver) { resetGame(); return; }
-    velocity = -520;
-    jumpSound.currentTime=0; jumpSound.play().catch(()=>{});
+if(gameOver){
+ctx.fillStyle="red";
+ctx.font="60px Arial";
+ctx.textAlign="center";
+ctx.fillText("GAME OVER",canvas.width/2,canvas.height/2);
+requestAnimationFrame(update);
+return;
 }
 
-let touchUsed = false;
+// ФИЗИКА
+velocity+=gravity*deltaTime;
+birdY+=velocity*deltaTime;
+if(invincibleTime>0)invincibleTime-=deltaTime;
 
-document.addEventListener("touchstart", e => {
-    touchUsed = true;
-    jump();
+if(birdY+birdSize>canvas.height){
+birdY=canvas.height-birdSize;
+if(invincibleTime<=0){
+shieldActive?(shieldActive=false,invincibleTime=0.5):endGame();
+}
+}
+if(birdY<0)birdY=0;
+
+// ПТИЦА
+ctx.save();
+ctx.translate(birdX+birdSize/2,birdY+birdSize/2);
+ctx.rotate(velocity*0.0015);
+ctx.drawImage(shieldActive?birdShieldImg:birdImg,-birdSize/2,-birdSize/2,birdSize,birdSize);
+ctx.restore();
+
+// ПОРТАЛ
+if(portalActive&&portalObj){
+portalObj.x-=pipeSpeed*deltaTime;
+
+// мерцание
+let alphaPortal=0.7+0.3*Math.sin(Date.now()/200);
+ctx.globalAlpha=alphaPortal;
+ctx.drawImage(portalImg,portalObj.x,portalObj.y,portalObj.width,portalObj.height);
+ctx.globalAlpha=1;
+
+// создаём импульсы
+if(Math.floor(Date.now()/250)%2===0)addPortalPulse();
+drawPortalPulses(deltaTime);
+
+let hitPortal=
+birdX+birdSize>portalObj.x &&
+birdX<portalObj.x+portalObj.width &&
+birdY+birdSize>portalObj.y &&
+birdY<portalObj.y+portalObj.height;
+
+if(hitPortal){
+inSpace=true;
+spaceScore=0;
+pipes=[];
+portalActive=false;
+portalObj=null;
+portalPulses=[];
+}
+}
+
+// ТРУБЫ
+pipes.forEach(pipe=>{
+pipe.x-=pipeSpeed*deltaTime;
+ctx.fillStyle=inSpace?"#888":"#2ecc71";
+ctx.fillRect(pipe.x,0,pipeWidth,pipe.top);
+ctx.fillRect(pipe.x,pipe.top+pipeGap,pipeWidth,canvas.height);
+
+let collision=
+birdX+birdSize>pipe.x &&
+birdX<pipe.x+pipeWidth &&
+(birdY<pipe.top || birdY+birdSize>pipe.top+pipeGap);
+
+if(collision&&invincibleTime<=0){
+if(shieldActive){
+shieldActive=false;
+invincibleTime=0.5;
+pipe.x=-200;
+}else endGame();
+}
+
+if(!pipe.passed&&pipe.x+pipeWidth<birdX){
+pipe.passed=true;
+if(inSpace){spaceScore++;totalScore+=2;}
+else{score++;totalScore++;}
+}
 });
 
-document.addEventListener("mousedown", e => {
-    if (!touchUsed) jump();
-});
+pipes=pipes.filter(p=>p.x+pipeWidth>0);
 
-// Сбрасываем touchUsed после короткой паузы, чтобы мышь снова работала
-document.addEventListener("touchend", e => {
-    setTimeout(() => { touchUsed = false; }, 100);
-});
-
-function update(timestamp) {
-    let deltaTime = (timestamp - lastTime)/1000;
-    lastTime = timestamp;
-
-    ctx.clearRect(0,0,canvas.width,canvas.height);
-
-    if (!imagesReady) {
-        ctx.fillStyle="#4ec0ca";
-        ctx.fillRect(0,0,canvas.width,canvas.height);
-        ctx.fillStyle="white";
-        ctx.font="40px Arial";
-        ctx.textAlign="center";
-        ctx.fillText("Загрузка...", canvas.width/2, canvas.height/2);
-        requestAnimationFrame(update);
-        return;
-    }
-
-    // ===== Смена фона каждые 30 очков =====
-    currentBgIndex = Math.floor(score/15) % bgImgs.length;
-    ctx.drawImage(bgImgs[currentBgIndex],0,0,canvas.width,canvas.height);
-
-    // ===== Облака =====
-    clouds.forEach(cloud => {
-        cloud.x -= cloud.speed * deltaTime;
-        ctx.globalAlpha = 0.6;
-        ctx.fillStyle = "white";
-        ctx.beginPath();
-        ctx.ellipse(cloud.x, cloud.y, cloud.size, cloud.size*0.6, 0, 0, Math.PI*2);
-        ctx.fill();
-        ctx.globalAlpha = 1;
-        if (cloud.x + cloud.size < 0) cloud.x = canvas.width + cloud.size;
-    });
-
-    if (!started) {
-        drawCenteredText("Тапни чтобы начать",50,"white");
-        requestAnimationFrame(update);
-        return;
-    }
-
-    if (gameOver) {
-        drawCenteredText("GAME OVER",70,"red");
-        drawCenteredText("Тапни для рестарта",30,"white",80);
-        requestAnimationFrame(update);
-        return;
-    }
-
-    // ===== Физика птицы =====
-    velocity += gravity * deltaTime;
-    birdY += velocity * deltaTime;
-
-    if (birdY + birdSize > canvas.height || birdY < 0) { gameOver=true; stopMusic(); }
-
-    // ===== Птичка =====
-    ctx.save();
-    ctx.translate(birdX + birdSize/2, birdY + birdSize/2);
-    ctx.rotate(velocity*0.0015);
-    ctx.drawImage(birdImg,-birdSize/2,-birdSize/2,birdSize,birdSize);
-    ctx.restore();
-
-    // ===== Трубы =====
-    pipes.forEach(pipe => {
-        pipe.x -= pipeSpeed*deltaTime;
-        ctx.fillStyle="#2ecc71";
-        ctx.fillRect(pipe.x,0,pipeWidth,pipe.top);
-        ctx.fillRect(pipe.x,pipe.top+pipeGap,pipeWidth,canvas.height);
-        if (birdX+birdSize>pipe.x && birdX<pipe.x+pipeWidth && (birdY<pipe.top || birdY+birdSize>pipe.top+pipeGap)) {
-            gameOver=true; stopMusic();
-        }
-        if (!pipe.passed && pipe.x+pipeWidth<birdX) { pipe.passed=true; score++; }
-    });
-    pipes = pipes.filter(pipe=>pipe.x+pipeWidth>0);
-
-    // ===== Счёт =====
-    ctx.fillStyle="white";
-    ctx.font="bold 60px Arial";
-    ctx.textAlign="center";
-    ctx.fillText(score,canvas.width/2,100);
-
-    requestAnimationFrame(update);
+if(inSpace&&spaceScore>=15){
+inSpace=false;
+invincibleTime=5;
+pipes=[];
 }
 
-function drawCenteredText(text,size,color,offset=0){
-    ctx.fillStyle=color;
-    ctx.font=size+"px Arial";
-    ctx.textAlign="center";
-    ctx.fillText(text,canvas.width/2,canvas.height/2+offset);
+// ОЧКИ
+ctx.fillStyle="white";
+ctx.font="bold 50px Arial";
+ctx.textAlign="center";
+ctx.fillText(totalScore,canvas.width/2,80);
+
+requestAnimationFrame(update);
 }
 
-initGame();
+function endGame(){
+gameOver=true;
+stopMusic();
+coins+=totalScore;
+localStorage.setItem("coins",coins);
+playBtn.style.display="block";
+shopBtn.style.display="block";
+}
+
+function hideButtons(){
+playBtn.style.display="none";
+shopBtn.style.display="none";
+buyShieldBtn.style.display="none";
+backBtn.style.display="none";
+}
+
+playBtn.onclick=()=>resetGame();
+shopBtn.onclick=()=>{
+inShop=true;
+hideButtons();
+buyShieldBtn.style.display="block";
+backBtn.style.display="block";
+};
+buyShieldBtn.onclick=()=>{
+if(coins>=500){
+coins-=500;
+shieldOwned=true;
+localStorage.setItem("coins",coins);
+}
+};
+backBtn.onclick=()=>{
+inShop=false;
+hideButtons();
+playBtn.style.display="block";
+shopBtn.style.display="block";
+};
+
 requestAnimationFrame(update);
 </script>
-
 </body>
-
 </html>
-
-
-
-
-
-
-
